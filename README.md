@@ -2,7 +2,7 @@
 
 This bundle provides skills and commands for automated job searching, candidate profile generation, and application automation. It works with OpenCode, Claude Code, and other AI coding agents.
 
-## Install OpenCode (Required)
+## Install OpenCode(Recommended) /Claude code (Required)
 
 If you don't have OpenCode installed, follow these steps:
 
