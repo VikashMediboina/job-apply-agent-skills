@@ -153,7 +153,7 @@ opencode --version
 
 ```bash
 # Clone this repo to get the install script
-git clone https://github.com/anomalyco/opencode.git ~/jobs-skill
+git clone https://github.com/VikashMediboina/job-apply-agent-skills.git ~/jobs-skill
 cd ~/jobs-skill
 ```
 
@@ -574,7 +574,7 @@ Before creating a new issue, check if it's already reported:
 
 ```bash
 # View existing issues
-open https://github.com/anomalyco/opencode/issues
+open https://github.com/VikashMediboina/job-apply-agent-skills/issues
 ```
 
 **Step 2: Create an Issue**
@@ -623,7 +623,7 @@ For code contributions:
 
 ```bash
 # 1. Fork the repo
-open https://github.com/anomalyco/opencode/fork
+open https://github.com/VikashMediboina/job-apply-agent-skills/fork
 
 # 2. Clone your fork
 git clone https://github.com/YOUR_USERNAME/opencode.git ~/jobs-skill
@@ -641,7 +641,7 @@ git commit -m "Add: description"
 git push origin feature/my-feature
 
 # 6. Create PR
-open https://github.com/anomalyco/opencode/compare
+open https://github.com/VikashMediboina/job-apply-agent-skills/compare
 ```
 
 ### Contribution Guidelines
@@ -680,5 +680,5 @@ Contributors will be acknowledged in the project.
 ## Getting Help
 
 - **Documentation** - Start with this README
-- **Issues** - Report bugs at https://github.com/anomalyco/opencode/issues
-- **Discussions** - Ask questions at https://github.com/anomalyco/opencode/discussions
+- **Issues** - Report bugs at https://github.com/VikashMediboina/job-apply-agent-skills/issues
+- **Discussions** - Ask questions at https://github.com/VikashMediboina/job-apply-agent-skills/discussions
