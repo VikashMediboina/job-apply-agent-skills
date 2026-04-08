@@ -112,32 +112,27 @@ opencode mcp list
 # Expected output should include: playwright
 ```
 
-### Step 3: Install Job Search MCPs (Optional for auto-job-hunt)
+### Step 3: Authenticate Job Search MCPs (Optional for auto-job-hunt)
 
-Add to your OpenCode config file:
+Authenticate with Dice and Indeed MCPs using the built-in auth command:
 
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
-    "dice": {
-      "type": "client",
-      "url": "https://mcp.dice.com/mcp",
-      "enabled": true
-    },
-    "indeed": {
-      "type": "client",
-      "url": "https://mcp.indeed.com/claude/mcp",
-      "enabled": true
-    }
-  }
-}
+```bash
+# Authenticate with Dice MCP
+opencode mcp auth dice
+
+# Authenticate with Indeed MCP
+opencode mcp auth indeed
+
+# List all MCPs and their auth status
+opencode mcp auth list
 ```
+
+Note: You may need a Dice/Indeed account for OAuth authentication.
 
 Then verify:
 
 ```bash
-# Verify all MCPs are attached
+# Verify all MCPs are authenticated
 opencode mcp list
 ```
 
