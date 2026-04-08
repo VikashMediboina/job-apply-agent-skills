@@ -69,7 +69,7 @@ git --version
 opencode --version  # latest
 ```
 
-##Installation (Run one by one)
+## Installation (Run one by one)
 
 **Important:** Each step depends on the previous one complete successfully.
 
