@@ -1,0 +1,68 @@
+{
+  "flowId": "ashby",
+  "version": "1.0.0",
+  "platform": "ashby",
+  "platformType": "ats",
+  "description": "Ashby ATS application form - single page, no login required",
+
+  "nodes": {
+    "landing": {
+      "type": "page",
+      "urlPattern": "jobs.ashbyhq.com/.*",
+      "description": "Job posting page with Apply button"
+    },
+    "form": {
+      "type": "form",
+      "description": "Application form (typically single page)",
+      "fields": [
+        "_systemfield_name",
+        "_systemfield_email",
+        "_systemfield_phone",
+        "_systemfield_resume",
+        "linkedin",
+        "customQuestions"
+      ],
+      "nextButton": "button[type='submit']"
+    },
+    "confirmation": {
+      "type": "confirmation",
+      "description": "Application submitted confirmation"
+    }
+  },
+
+  "edges": [
+    {"from": "landing", "to": "form", "trigger": "click_apply"},
+    {"from": "form", "to": "confirmation", "trigger": "click_submit"}
+  ],
+
+  "fieldMappings": {
+    "_systemfield_name": {"source": "profile", "field": "name"},
+    "_systemfield_email": {"source": "profile", "field": "email"},
+    "_systemfield_phone": {"source": "profile", "field": "phone"},
+    "_systemfield_resume": {"source": "role", "field": "resumePath"},
+    "linkedin": {"source": "profile", "field": "linkedin"}
+  },
+
+  "commonQuestions": [
+    {"question": "Are you authorized to work in the United States?", "answer": "Yes"},
+    {"question": "Will you now or in the future require visa sponsorship?", "answer": "Yes"},
+    {"question": "How did you hear about this role?", "answer": "LinkedIn/Dice"}
+  ],
+
+  "knownFields": {
+    "_systemfield_name": {"type": "text", "required": true, "labelPatterns": ["full name", "name"]},
+    "_systemfield_email": {"type": "email", "required": true, "labelPatterns": ["email"]},
+    "_systemfield_phone": {"type": "tel", "required": false, "labelPatterns": ["phone"]},
+    "_systemfield_resume": {"type": "file", "required": true, "accept": [".pdf", ".doc", ".docx"]},
+    "linkedin": {"type": "url", "required": false, "labelPatterns": ["linkedin"]}
+  },
+
+  "platformNotes": {
+    "ashby": {
+      "noLoginRequired": true,
+      "singlePageForm": true,
+      "systemFieldPrefix": "_systemfield_",
+      "customQuestionsVary": true
+    }
+  }
+}

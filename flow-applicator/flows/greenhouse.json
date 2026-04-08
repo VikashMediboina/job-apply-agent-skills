@@ -1,0 +1,82 @@
+{
+  "flowId": "greenhouse",
+  "version": "1.0.0",
+  "platform": "greenhouse",
+  "platformType": "ats",
+  "description": "Greenhouse ATS application form - typically no login required",
+
+  "nodes": {
+    "landing": {
+      "type": "page",
+      "urlPattern": "boards.greenhouse.io/.*/jobs/.*",
+      "description": "Job posting page with Apply button"
+    },
+    "form_start": {
+      "type": "form",
+      "description": "Initial application form",
+      "fields": [
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "resumeUpload"
+      ],
+      "nextButton": "button[type='submit']"
+    },
+    "extra_questions": {
+      "type": "form",
+      "description": "Additional questions (if any)",
+      "fields": [
+        "workAuth",
+        "linkedIn",
+        "portfolio",
+        "customQuestions"
+      ]
+    },
+    "submit": {
+      "type": "form",
+      "description": "Final submit"
+    }
+  },
+
+  "edges": [
+    {"from": "landing", "to": "form_start", "trigger": "click_apply"},
+    {"from": "form_start", "to": "extra_questions", "trigger": "click_next"},
+    {"from": "extra_questions", "to": "submit", "trigger": "click_submit"},
+    {"from": "submit", "to": "done", "trigger": "click_submit"}
+  ],
+
+  "fieldMappings": {
+    "firstName": {"source": "profile", "field": "firstName"},
+    "lastName": {"source": "profile", "field": "lastName"},
+    "email": {"source": "profile", "field": "email"},
+    "phone": {"source": "profile", "field": "phone"},
+    "resumeUpload": {"source": "role", "field": "resumePath"},
+    "linkedIn": {"source": "profile", "field": "linkedin"},
+    "portfolio": {"source": "profile", "field": "portfolio"}
+  },
+
+  "commonQuestions": [
+    {"question": "Are you authorized to work in the US?", "answer": "Yes"},
+    {"question": "Do you require sponsorship?", "answer": "Yes, I will require sponsorship in the future"},
+    {"question": "How did you hear about this position?", "answer": "LinkedIn/Dice"}
+  ],
+
+  "knownFields": {
+    "firstName": {"type": "text", "required": true},
+    "lastName": {"type": "text", "required": true},
+    "email": {"type": "email", "required": true},
+    "phone": {"type": "tel", "required": false},
+    "resumeUpload": {"type": "file", "required": true, "accept": [".pdf", ".doc", ".docx"]},
+    "linkedIn": {"type": "url", "required": false},
+    "website": {"type": "url", "required": false}
+  },
+
+  "platformNotes": {
+    "greenhouse": {
+      "noLoginRequired": true,
+      "iframeForms": true,
+      "commonFields": ["first_name", "last_name", "email", "phone", "resume", "linkedin"]
+    }
+  }
+}

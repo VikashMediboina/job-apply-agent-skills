@@ -1,0 +1,124 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-04-07",
+  "instincts": [
+    {
+      "id": "dice-redirect",
+      "pattern": "Dice apply URLs redirect to the actual ATS",
+      "action": "Navigate to Dice URL, wait for redirect, detect real platform from final URL",
+      "confidence": 0.95,
+      "source": "observation"
+    },
+    {
+      "id": "greenhouse-no-login",
+      "pattern": "Greenhouse forms rarely require login",
+      "action": "Proceed directly to form fill without login step",
+      "confidence": 0.9,
+      "source": "observation"
+    },
+    {
+      "id": "lever-single-page",
+      "pattern": "Lever forms are often single-page with all fields visible",
+      "action": "Fill all fields before clicking submit, no multi-page navigation needed",
+      "confidence": 0.85,
+      "source": "observation"
+    },
+    {
+      "id": "workday-multi-page",
+      "pattern": "Workday applications are always multi-page (5-7 pages)",
+      "action": "Expect page-by-page flow with Next buttons. Resume may auto-parse.",
+      "confidence": 0.9,
+      "source": "observation"
+    },
+    {
+      "id": "eeo-always-decline",
+      "pattern": "EEO questions (gender, race, veteran, disability) are always optional",
+      "action": "Select 'Decline to self-identify' or 'I don't wish to answer' for all EEO questions",
+      "confidence": 1.0,
+      "source": "policy"
+    },
+    {
+      "id": "uncheck-follow",
+      "pattern": "LinkedIn Easy Apply has a 'Follow company' checkbox on review page",
+      "action": "Uncheck the follow checkbox before submitting",
+      "confidence": 0.95,
+      "source": "observation"
+    },
+    {
+      "id": "sponsorship-yes",
+      "pattern": "Any question about requiring visa sponsorship",
+      "action": "Answer 'Yes' — candidate requires H1B sponsorship",
+      "confidence": 1.0,
+      "source": "profile"
+    },
+    {
+      "id": "authorized-yes",
+      "pattern": "Any question about being authorized to work in the US",
+      "action": "Answer 'Yes' — candidate is authorized on F1 OPT/STEM OPT",
+      "confidence": 1.0,
+      "source": "profile"
+    },
+    {
+      "id": "start-immediately",
+      "pattern": "Any question about start date or availability",
+      "action": "Answer 'Immediately' or 'Available immediately'",
+      "confidence": 1.0,
+      "source": "profile"
+    },
+    {
+      "id": "salary-range",
+      "pattern": "Any question about salary expectation or compensation",
+      "action": "Answer '$120,000-$150,000' unless specific range given",
+      "confidence": 0.95,
+      "source": "profile"
+    },
+    {
+      "id": "snapshot-not-screenshot",
+      "pattern": "Need to read page content during application",
+      "action": "Always use browser_snapshot (accessibility tree) not browser_take_screenshot",
+      "confidence": 1.0,
+      "source": "policy"
+    },
+    {
+      "id": "resume-upload-pdf",
+      "pattern": "Resume upload field detected",
+      "action": "Upload from role-specific pdf/resume.pdf path",
+      "confidence": 1.0,
+      "source": "policy"
+    },
+    {
+      "id": "how-did-you-hear",
+      "pattern": "'How did you hear about us' or 'referral source' question",
+      "action": "Answer 'LinkedIn' or 'Dice' based on job source",
+      "confidence": 0.9,
+      "source": "convention"
+    },
+    {
+      "id": "cover-letter-optional",
+      "pattern": "Cover letter upload or textarea (not required)",
+      "action": "Skip if optional. If required, generate from template in profile_data.md",
+      "confidence": 0.85,
+      "source": "convention"
+    },
+    {
+      "id": "new-question-to-flow",
+      "pattern": "A new generic question was answered via LLM",
+      "action": "Add the Q&A to the flow's commonQuestions so it's free next time",
+      "confidence": 1.0,
+      "source": "policy"
+    }
+  ],
+  "urlPlatformMap": {
+    "linkedin.com/jobs": "linkedin",
+    "boards.greenhouse.io": "greenhouse",
+    "greenhouse.io": "greenhouse",
+    "jobs.lever.co": "lever",
+    "lever.co": "lever",
+    "ashbyhq.com": "ashby",
+    "jobs.ashbyhq.com": "ashby",
+    "myworkdayjobs.com": "workday",
+    "workday.com": "workday",
+    "icims.com": "icims",
+    "dice.com": "dice_redirect"
+  }
+}

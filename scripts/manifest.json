@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "name": "jobs-skill",
+  "description": "Job hunt automation skill bundle for OpenCode, Claude Code, and agents",
+  "source_dir": "Jobs-skill",
+  "installs": {
+    "global": {
+      "skills": [
+        {
+          "source": "skills/auto-job-hunt",
+          "target": ".config/opencode/skills/auto-job-hunt",
+          "description": "Automated job scraping from Dice and Indeed"
+        },
+        {
+          "source": "skills/flow-applicator",
+          "target": ".config/opencode/skills/flow-applicator",
+          "description": "Flow-graph based job application automation"
+        },
+        {
+          "source": "skills/resume-profile-generator",
+          "target": ".config/opencode/skills/resume-profile-generator",
+          "description": "Resume to structured candidate profile generator"
+        }
+      ],
+      "commands": [
+        {
+          "source": "commands/auto-job-hunt.md",
+          "target": ".config/opencode/commands/auto-job-hunt.md",
+          "name": "auto-job-hunt"
+        },
+        {
+          "source": "commands/apply-jobs.md",
+          "target": ".config/opencode/commands/apply-jobs.md",
+          "name": "apply-jobs"
+        },
+        {
+          "source": "commands/resume-profile.md",
+          "target": ".config/opencode/commands/resume-profile.md",
+          "name": "resume-profile"
+        }
+      ],
+      "flows": [
+        {
+          "source": "flow-applicator/flows",
+          "target": ".agents/skills/flow-applicator/flows",
+          "description": "Shared ATS flow graphs (global storage)"
+        }
+      ]
+    },
+    "local": {
+      "skills": [
+        {
+          "source": "skills/auto-job-hunt",
+          "target": "skills/auto-job-hunt",
+          "description": "Automated job scraping from Dice and Indeed"
+        },
+        {
+          "source": "skills/flow-applicator",
+          "target": "skills/flow-applicator",
+          "description": "Flow-graph based job application automation"
+        },
+        {
+          "source": "skills/resume-profile-generator",
+          "target": "skills/resume-profile-generator",
+          "description": "Resume to structured candidate profile generator"
+        }
+      ],
+      "commands": [
+        {
+          "source": "commands/auto-job-hunt.md",
+          "target": "commands/auto-job-hunt.md",
+          "name": "auto-job-hunt"
+        },
+        {
+          "source": "commands/apply-jobs.md",
+          "target": "commands/apply-jobs.md",
+          "name": "apply-jobs"
+        },
+        {
+          "source": "commands/resume-profile.md",
+          "target": "commands/resume-profile.md",
+          "name": "resume-profile"
+        }
+      ],
+      "flows": [
+        {
+          "source": "flow-applicator/flows",
+          "target": "skills/flow-applicator/flows",
+          "description": "Local ATS flow graphs"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "python": ["python3"],
+    "git": ["git"],
+    "mcp": ["dice", "indeed"]
+  }
+}

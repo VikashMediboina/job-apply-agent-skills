@@ -1,0 +1,136 @@
+{
+  "flowId": "dice_apply",
+  "version": "1.0.0",
+  "platform": "dice",
+  "platformType": "job_board",
+  "description": "Dice.com 2-step apply wizard. Resume pre-loaded from Dice profile, no form fields to fill. Step 1: Resume & Cover Letter (click Next). Step 2: Review (click Submit).",
+
+  "nodes": {
+    "job_detail": {
+      "type": "page",
+      "urlPattern": "dice\\.com/job-detail/",
+      "description": "Job detail page with Apply Now button",
+      "elements": {
+        "applyButton": "button:text('Apply Now')"
+      }
+    },
+    "login_gate": {
+      "type": "page",
+      "urlPattern": "dice\\.com/dashboard/login",
+      "description": "Dice login page - requires manual user login",
+      "elements": {
+        "emailField": "textbox:text('Enter your email')",
+        "continueEmail": "button:text('Continue with email')",
+        "continueGoogle": "button:text('Continue with Google')",
+        "continueApple": "button:text('Continue with Apple')"
+      },
+      "waitFor": "redirect to wizard after login"
+    },
+    "step1_resume": {
+      "type": "form",
+      "urlPattern": "dice\\.com/job-applications/.*/wizard",
+      "description": "Step 1 of 2: Resume & Cover Letter. Resume is pre-loaded from Dice profile. Optional cover letter upload. Click Next to proceed.",
+      "fields": [
+        "resume",
+        "coverLetter"
+      ],
+      "elements": {
+        "progressIndicator": "text:text('Step 1 of 2')",
+        "heading": "heading:text('Resume & Cover Letter')",
+        "resumeFile": "text showing pre-loaded resume filename",
+        "coverLetterUpload": "button:text('Upload cover letter') or file input",
+        "nextButton": "button:text('Next')"
+      },
+      "nextButton": "button:text('Next')"
+    },
+    "step2_review": {
+      "type": "review",
+      "urlPattern": "dice\\.com/job-applications/.*/wizard",
+      "description": "Step 2 of 2: Review your application. Shows resume, cover letter status, and work authorization. Click Submit to apply.",
+      "fields": [],
+      "elements": {
+        "progressIndicator": "text:text('Step 2 of 2')",
+        "heading": "heading:text('Review your application')",
+        "resumeDisplay": "text showing resume filename",
+        "coverLetterStatus": "text showing cover letter status",
+        "workAuthDisplay": "text showing work authorization status (e.g. 'Need H1 Visa')",
+        "backButton": "button:text('Back')",
+        "submitButton": "button:text('Submit')"
+      },
+      "submitButton": "button:text('Submit')"
+    },
+    "confirmation": {
+      "type": "confirmation",
+      "description": "Application submitted successfully",
+      "elements": {
+        "successMessage": "text confirming application submission"
+      }
+    }
+  },
+
+  "edges": [
+    {"from": "job_detail", "to": "login_gate", "trigger": "click_apply", "condition": "not_logged_in"},
+    {"from": "job_detail", "to": "step1_resume", "trigger": "click_apply", "condition": "logged_in"},
+    {"from": "login_gate", "to": "step1_resume", "trigger": "auto_redirect", "condition": "after_login"},
+    {"from": "step1_resume", "to": "step2_review", "trigger": "click_next"},
+    {"from": "step2_review", "to": "confirmation", "trigger": "click_submit"},
+    {"from": "step2_review", "to": "step1_resume", "trigger": "click_back"}
+  ],
+
+  "fieldMappings": {
+    "resume": {"source": "profile", "field": "resumePath"},
+    "coverLetter": {"source": "none", "field": "optional"}
+  },
+
+  "commonQuestions": [
+    {"question": "Are you authorized to work in the US?", "answer": "Yes, with visa sponsorship"},
+    {"question": "Do you require visa sponsorship?", "answer": "Yes"},
+    {"question": "What is your work authorization status?", "answer": "F1 OPT (STEM eligible)"}
+  ],
+
+  "knownFields": {
+    "resume": {
+      "type": "file",
+      "required": true,
+      "preLoaded": true,
+      "note": "Resume is pre-loaded from Dice profile (CV_mediboina_vikash.pdf). No upload needed."
+    },
+    "coverLetter": {
+      "type": "file",
+      "required": false,
+      "preLoaded": false,
+      "note": "Optional cover letter upload. Skip unless specifically required."
+    },
+    "workAuthorization": {
+      "type": "display",
+      "required": false,
+      "preLoaded": true,
+      "note": "Work authorization is pre-filled from Dice profile ('Need H1 Visa'). Display only on review page."
+    }
+  },
+
+  "platformNotes": {
+    "dice": {
+      "loginRequired": true,
+      "loginUrl": "https://www.dice.com/dashboard/login",
+      "loginMethods": ["email", "google", "apple"],
+      "applyUrlPattern": "https://www.dice.com/job-applications/{jobId}/start-apply",
+      "wizardUrlPattern": "https://www.dice.com/job-applications/{jobId}/wizard",
+      "profilePreFilled": true,
+      "resumePreLoaded": true,
+      "workAuthPreFilled": true,
+      "noFormFields": true,
+      "totalSteps": 2,
+      "typicalTimeSeconds": 10,
+      "notes": [
+        "Dice pre-loads everything from user profile - fastest apply flow",
+        "Apply Now on job detail redirects to /start-apply which redirects to /wizard",
+        "If not logged in, redirects to /dashboard/login?redirectUrl=/job-applications/{id}",
+        "After login, automatically redirects to the wizard",
+        "Step 1 just shows resume (pre-loaded) and optional cover letter",
+        "Step 2 is review only - shows resume, cover letter status, work auth",
+        "No fields to fill, just Next → Submit"
+      ]
+    }
+  }
+}

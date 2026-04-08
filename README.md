@@ -1,0 +1,502 @@
+# jobs-skill: Job Hunt Automation for AI Coding Agents
+
+This bundle provides skills and commands for automated job searching, candidate profile generation, and application automation. It works with OpenCode, Claude Code, and other AI coding agents.
+
+## Prerequisites
+
+Before installing, ensure you have:
+
+```bash
+# Required tools
+python3 --version   # >= 3.10
+git --version
+opencode --version  # latest
+```
+
+##Installation (Run one by one)
+
+**Important:** Each step depends on the previous one complete successfully.
+
+### Step 1: Install Playwright MCP (Required for flow-applicator)
+
+Run the installer to auto-add Playwright MCP:
+
+```bash
+cd ~/jobs-skill
+python3 scripts/install.py --mcp-only
+```
+
+Or manually add to your OpenCode config file:
+
+```bash
+code ~/.config/opencode/opencode.json
+```
+
+Add the Playwright MCP configuration:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@anthropic/mcp-server-playwright"],
+      "enabled": true
+    }
+  }
+}
+```
+
+### Step 2: Verify Playwright MCP is attached
+
+```bash
+# Check if Playwright MCP is configured and attached
+opencode mcp list
+
+# Expected output should include: playwright
+```
+
+### Step 3: Install Job Search MCPs (Optional for auto-job-hunt)
+
+Add to your OpenCode config file:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "dice": {
+      "type": "client",
+      "url": "https://mcp.dice.com/mcp",
+      "enabled": true
+    },
+    "indeed": {
+      "type": "client",
+      "url": "https://mcp.indeed.com/claude/mcp",
+      "enabled": true
+    }
+  }
+}
+```
+
+Then verify:
+
+```bash
+# Verify all MCPs are attached
+opencode mcp list
+```
+
+### Step 4: Verify Prerequisites
+
+```bash
+# Check Python
+python3 --version
+
+# Check git
+git --version
+
+# Check OpenCode is installed
+opencode --version
+```
+
+### Step 5: Clone the Repository
+
+```bash
+# Clone this repo to get the install script
+git clone https://github.com/anomalyco/opencode.git ~/jobs-skill
+cd ~/jobs-skill
+```
+
+Or if you already have it:
+
+```bash
+cd ~/jobs-skill
+git pull
+```
+
+### Step 6: Run the Installer
+
+```bash
+# Navigate to the repo
+cd ~/jobs-skill
+
+# Dry run first to see what would be installed
+python3 scripts/install.py --dry-run
+
+# Run with global scope (recommended)
+python3 scripts/install.py --scope global
+
+# Or local scope
+python3 scripts/install.py --scope local
+```
+
+The installer will:
+1. Clone the repo to a temp location
+2. Ask for scope (global or local)
+3. Install skills to `~/.config/opencode/skills/` (global) or `./skills/` (local)
+4. Install commands to `~/.config/opencode/commands/` (global) or `./commands/` (local)
+5. Install flows to `~/.agents/skills/flow-applicator/flows/` (global) or `./skills/flow-applicator/flows/` (local)
+
+### Step 7: Verify Installation
+
+```bash
+# Check skills were installed
+ls ~/.config/opencode/skills/
+# Should show: auto-job-hunt/  flow-applicator/  resume-profile-generator/
+
+# Check commands were installed
+ls ~/.config/opencode/commands/
+# Should show: auto-job-hunt.md  apply-jobs.md  resume-profile.md
+
+# Check flows were installed
+ls ~/.agents/skills/flow-applicator/flows/
+# Should show: greenhouse.json  lever.json  linkedin_easy_apply.json  ...
+```
+
+## Scope: Global vs Local
+
+| Aspect | Global | Local |
+|-------|-------|-------|
+| Skills | `~/.config/opencode/skills/` | `./skills/` (workspace) |
+| Commands | `~/.config/opencode/commands/` | `./commands/` (workspace) |
+| Flows | `~/.agents/skills/flow-applicator/flows/` | `./skills/flow-applicator/flows/` |
+| Use case | All your projects | Single project |
+
+**Why it matters:** Global installs apply to every project. Local installs are project-specific and won't be shared.
+
+**Choosing scope:**
+- Use `global` for skills you want in all projects
+- Use `local` for project-specific customizations
+
+## Skills Usage
+
+### 1. auto-job-hunt
+
+Search Dice and Indeed for jobs matching your profile, score them, and export to markdown.
+
+**When to use:**
+- User says "find me jobs", "search for [role] jobs", "job hunt"
+- You have a candidate profile and want qualified job listings
+
+**How to invoke:**
+```
+Use the auto-job-hunt skill to search for jobs.
+```
+
+**Example 1: Search for data science jobs**
+```
+Find me data science jobs in San Francisco. Use auto-job-hunt with min score 70.
+```
+
+**Example 2: Search for remote DevOps roles**
+```
+Search for remote DevOps Engineer positions on Dice and Indeed. Min salary 120k.
+```
+
+**Example 3: Daily job scan**
+```
+Run today's job search. Score jobs using my full stack profile.
+```
+
+**Example 4: Search with salary filter**
+```
+Find Python developer jobs in NYC with salary 150k+. Use auto-job-hunt.
+```
+
+**Example 5: Both sources**
+```
+Search Dice and Indeed for machine learning engineer roles. Remote only.
+```
+
+### 2. flow-applicator
+
+Automate job applications using reusable flow graphs for ATS platforms.
+
+**When to use:**
+- User says "apply to jobs", "submit applications", "run applications"
+- You have a `jobs.md` file from auto-job-hunt
+- Jobs are on Dice/LinkedIn/Greenhouse/Lever/Ashby/Workday
+
+**How to invoke:**
+```
+Use the flow-applicator skill to apply to jobs.
+```
+
+### /apply-jobs
+
+Launches the flow-applicator skill directly.
+
+```bash
+/apply-jobs
+# or
+apply-jobs
+```
+
+**Example 1: Apply to today's jobs**
+```
+Apply to the qualified jobs from today's job search. Use flow-applicator.
+```
+
+**Example 2: Apply with min score**
+```
+Apply to jobs from 2026-04-07 using flow-applicator. Min score 80%.
+```
+
+**Example 3: Apply to specific company**
+```
+Apply to all qualified Google jobs using flow-applicator.
+```
+
+**Example 4: Dry run**
+```
+Show me the application plan for today's jobs. Don't apply yet.
+```
+
+### 3. resume-profile-generator
+
+Extract resume text, analyze sections, generate candidate profiles with scoring criteria.
+
+**When to use:**
+- User provides a resume file (.pdf, .docx, .txt)
+- You need structured candidate profiles for job matching
+- You need search terms for job searching
+
+**How to invoke:**
+```
+Use the resume-profile-generator skill to process resumes.
+```
+
+**Example 1: Parse a resume**
+```
+Process my resume at ~/documents/resume.pdf. Generate a candidate profile.
+```
+
+**Example 2: Multiple resumes**
+```
+Process all resumes in ~/applications/2026/. Generate candidate profiles for each.
+```
+
+**Example 3: Generate search terms**
+```
+Generate job search terms for a React Developer role based on my profile.
+```
+
+## Commands Usage
+
+### /auto-job-hunt
+
+Launches the auto-job-hunt skill directly.
+
+```bash
+/auto-job-hunt
+# or
+auto-job-hunt
+```
+
+**Example 1: Search with filters**
+```
+/auto-job-hunt role=DevOps Engineer location=Remote min_score=70
+```
+
+**Example 2: Dice only**
+```
+/auto-job-hunt source=dice role=Data Engineer
+```
+
+**Example 3: Export to CSV**
+```
+/auto-job-hunt format=csv output=jobs.csv
+```
+
+### /apply-jobs
+
+Launches the flow-applicator skill to submit job applications.
+
+```bash
+/apply-jobs
+# or
+apply-jobs
+```
+
+**Example 1: Apply to today's jobs**
+```
+/apply-jobs date=today min_score=70
+```
+
+**Example 2: Apply to specific date**
+```
+/apply-jobs date=2026-04-07 min_score=80
+```
+
+**Example 3: Dry run**
+```
+/apply-jobs date=today dry_run=true
+```
+
+### /resume-profile
+
+Launches the resume-profile-generator skill directly.
+
+```bash
+/resume-profile
+# or
+resume-profile
+```
+
+**Example 1: Process resume**
+```
+/resume-profile path=~/resume.pdf
+```
+
+**Example 2: Multiple roles**
+```
+/resume-profile path=~/resume.pdf roles="Full Stack Developer,Backend Engineer"
+```
+
+**Example 3: With Q&A answers**
+```
+/resume-profile path=~/resume.pdf auth=citizen mode=remote relocation=yes
+```
+
+## Interdependence
+
+**Why run one by one:** These components depend on each other.
+
+```
+resume-profile-generator  →  auto-job-hunt  →  flow-applicator
+       ↓                    ↓               ↓
+  Candidate Profile   →  Jobs List    →  Applications
+```
+
+1. **resume-profile-generator** creates your candidate profile
+2. **auto-job-hunt** uses the profile to find and score jobs
+3. **flow-applicator** applies to the scored jobs
+
+**Typical workflow:**
+
+```
+Step 1: Generate your profile
+/resume-profile path=~/resume.pdf
+
+Step 2: Find jobs
+/auto-job-hunt role="Full Stack Developer"
+
+Step 3: Apply
+/auto-job-hunt   # First search
+flow-applicator # Then apply
+```
+
+## File Structure
+
+```
+jobs-skill/
+├── scripts/
+│   ├── install.py          # Installation script
+│   └── manifest.json     # Install configuration
+├── commands/
+│   ├── auto-job-hunt.md
+│   ├── apply-jobs.md
+│   └── resume-profile.md
+├── skills/
+│   ├── auto-job-hunt/
+│   │   ├── SKILL.md
+│   │   ├── scripts/
+│   │   ├── prompts/
+│   │   ├── instincts/
+│   │   └── sources/
+│   ├── flow-applicator/
+│   │   ├── SKILL.md
+│   │   ├── scripts/
+│   │   ├── prompts/
+│   │   └── instincts/
+│   └── resume-profile-generator/
+│       ├── SKILL.md
+│       ├── scripts/
+│       └── instincts/
+└── flow-applicator/
+    └── flows/
+        ├── registry.json
+        ├── greenhouse.json
+        ├── lever.json
+        ├── linkedin_easy_apply.json
+        └── ...
+```
+
+## Troubleshooting
+
+### MCP not connected
+
+```bash
+# Authenticate MCP servers
+opencode mcp auth dice
+opencode mcp auth indeed
+
+# Verify
+opencode mcp list
+```
+
+### Permission errors
+
+```bash
+# Check permissions
+ls -la ~/.config/opencode/
+ls -la ~/.agents/
+
+# Fix if needed
+chmod 755 ~/.config/opencode
+chmod 755 ~/.agents
+```
+
+### Reinstall
+
+```bash
+# Force reinstall
+python3 scripts/install.py --force --scope global
+```
+
+### Verify skills load
+
+```bash
+# Test skill detection
+opencode --skills
+```
+
+## Uninstall
+
+```bash
+# Remove global installations
+rm -rf ~/.config/opencode/skills/auto-job-hunt
+rm -rf ~/.config/opencode/skills/flow-applicator
+rm -rf ~/.config/opencode/skills/resume-profile-generator
+rm -rf ~/.config/opencode/commands/auto-job-hunt.md
+rm -rf ~/.config/opencode/commands/apply-jobs.md
+rm -rf ~/.config/opencode/commands/resume-profile.md
+rm -rf ~/.agents/skills/flow-applicator/flows/
+
+# Remove local installations (from workspace)
+rm -rf skills/auto-job-hunt
+rm -rf skills/flow-applicator
+rm -rf skills/resume-profile-generator
+rm -rf commands/auto-job-hunt.md
+rm -rf commands/apply-jobs.md
+rm -rf commands/resume-profile.md
+```
+
+## Quick Reference
+
+| Command | Action |
+|---------|--------|
+| `python3 scripts/install.py --dry-run` | Preview install |
+| `python3 scripts/install.py --scope global` | Install globally |
+| `python3 scripts/install.py --scope local` | Install locally |
+| `python3 scripts/install.py --force` | Overwrite existing |
+
+| Trigger | Skill |
+|---------|-------|
+| "find jobs", "search jobs" | auto-job-hunt |
+| "apply to jobs" | flow-applicator |
+| "process resume", "profile" | resume-profile-generator |
+
+| Scope | Location |
+|------|----------|
+| Global | `~/.config/opencode/` |
+| Local | `./` (workspace) |

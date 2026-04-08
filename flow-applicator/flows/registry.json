@@ -1,0 +1,92 @@
+{
+  "registry": {
+    "version": "1.2.0",
+    "updated": "2026-04-07",
+    "flows": [
+      {
+        "flowId": "dice_apply",
+        "platform": "dice",
+        "platformType": "job_board",
+        "description": "Dice.com 2-step apply wizard (Resume→Review→Submit). Pre-filled from Dice profile, no form fields.",
+        "version": "1.0.0",
+        "fields": ["resume", "coverLetter"],
+        "requiresLogin": true,
+        "requiresUpload": false,
+        "preFilledFromProfile": true
+      },
+      {
+        "flowId": "linkedin_easy_apply",
+        "platform": "linkedin",
+        "platformType": "easy_apply",
+        "description": "LinkedIn Easy Apply multi-page form",
+        "version": "1.0.0",
+        "fields": ["fullName", "email", "phone", "resume", "workAuth", "visa"],
+        "requiresLogin": true,
+        "requiresUpload": true
+      },
+      {
+        "flowId": "greenhouse",
+        "platform": "greenhouse",
+        "platformType": "ats",
+        "description": "Greenhouse ATS application form",
+        "version": "1.0.0",
+        "fields": ["firstName", "lastName", "email", "phone", "resume"],
+        "requiresLogin": false,
+        "requiresUpload": true
+      },
+      {
+        "flowId": "lever",
+        "platform": "lever",
+        "platformType": "ats",
+        "description": "Lever ATS application form",
+        "version": "1.0.0",
+        "fields": ["name", "email", "phone", "resume", "linkedIn", "github"],
+        "requiresLogin": false,
+        "requiresUpload": true
+      },
+      {
+        "flowId": "ashby",
+        "platform": "ashby",
+        "platformType": "ats",
+        "description": "Ashby ATS single-page application form",
+        "version": "1.0.0",
+        "fields": ["name", "email", "phone", "resume", "linkedin"],
+        "requiresLogin": false,
+        "requiresUpload": true
+      },
+      {
+        "flowId": "workday",
+        "platform": "workday",
+        "platformType": "ats",
+        "description": "Workday ATS multi-page application (5-7 pages)",
+        "version": "1.0.0",
+        "fields": ["firstName", "lastName", "email", "phone", "address", "resume"],
+        "requiresLogin": false,
+        "requiresUpload": true
+      },
+      {
+        "flowId": "icims",
+        "platform": "icims",
+        "platformType": "ats",
+        "description": "iCIMS ATS multi-step application with account creation",
+        "version": "1.0.0",
+        "fields": ["firstName", "lastName", "email", "phone", "address", "resume"],
+        "requiresLogin": true,
+        "requiresUpload": true
+      }
+    ],
+    "platformPatterns": {
+      "dice": ["dice.com/job-detail", "dice.com/job-applications"],
+      "linkedin": ["linkedin.com/jobs"],
+      "greenhouse": ["greenhouse.io", "boards.greenhouse"],
+      "lever": ["lever.co", "jobs.lever.co"],
+      "ashby": ["ashbyhq.com", "jobs.ashbyhq"],
+      "workday": ["myworkdayjobs.com", "workday.com"],
+      "icims": ["icims.com"],
+      "workable": ["apply.workable.com", "jobs.workable.com"],
+      "smartrecruiters": ["smartrecruiters.com", "jobs.smartrecruiters.com"],
+      "jobvite": ["jobvite.com", "jobs.jobvite.com"],
+      "bamboohr": ["bamboohr.com"]
+    }
+  }
+}

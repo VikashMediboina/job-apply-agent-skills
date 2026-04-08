@@ -1,0 +1,161 @@
+{
+  "flowId": "icims",
+  "version": "1.0.0",
+  "platform": "icims",
+  "platformType": "ats",
+  "description": "iCIMS ATS - multi-step application with possible account creation. Common URL pattern: *.icims.com/jobs/*/job or careers-*.icims.com",
+
+  "nodes": {
+    "landing": {
+      "type": "landing",
+      "urlPattern": "icims.com/jobs/.*/job",
+      "description": "Job posting page with Apply button",
+      "indicators": ["Apply Now", "Apply Online", "Apply for this job"]
+    },
+    "login_or_register": {
+      "type": "login",
+      "description": "Account creation or login page. iCIMS often requires creating an account before applying.",
+      "fields": ["email", "password"],
+      "notes": "If 'Apply with LinkedIn' or 'Apply with Indeed' buttons exist, prefer those to skip account creation. If no account exists, create one with candidate email.",
+      "indicators": ["Sign In", "Create Account", "Register", "Apply with LinkedIn", "Apply with Indeed"]
+    },
+    "personal_info": {
+      "type": "form",
+      "description": "Personal information form - name, contact, address",
+      "fields": [
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "address",
+        "city",
+        "state",
+        "zipCode",
+        "country"
+      ],
+      "nextButton": "Next"
+    },
+    "resume_upload": {
+      "type": "upload",
+      "description": "Resume upload page - may auto-parse after upload",
+      "fields": ["resumeUpload"],
+      "notes": "iCIMS may parse the resume and pre-fill fields. Wait for parsing to complete before proceeding.",
+      "indicators": ["Upload Resume", "Attach Resume", "Upload your resume"]
+    },
+    "experience": {
+      "type": "form",
+      "description": "Work experience section - may be pre-filled from resume parse",
+      "fields": [
+        "currentEmployer",
+        "currentTitle",
+        "yearsExperience"
+      ],
+      "notes": "Verify pre-filled data matches resume. Correct any parsing errors.",
+      "nextButton": "Next"
+    },
+    "questions": {
+      "type": "form",
+      "description": "Custom screening questions - varies by employer",
+      "fields": [
+        "workAuth",
+        "sponsorship",
+        "salary",
+        "startDate",
+        "willingToRelocate"
+      ],
+      "notes": "Questions are employer-specific. Use answer_engine priority chain. Common patterns: radio buttons for work auth, text fields for salary.",
+      "indicators": ["Screening Questions", "Additional Questions", "Required Questions"]
+    },
+    "eeo": {
+      "type": "form",
+      "description": "EEO/voluntary self-identification - gender, race, veteran, disability",
+      "fields": [
+        "gender",
+        "race",
+        "veteranStatus",
+        "disabilityStatus"
+      ],
+      "notes": "These are voluntary. Select 'Decline to self-identify' or 'Prefer not to say' for all EEO fields unless candidate explicitly wants to disclose.",
+      "indicators": ["Voluntary Self-Identification", "EEO", "Equal Employment"]
+    },
+    "review": {
+      "type": "review",
+      "description": "Review and submit page",
+      "indicators": ["Review", "Review Application", "Submit Application"],
+      "notes": "Verify all fields are correctly filled. Do NOT submit if any required fields are empty."
+    },
+    "confirmation": {
+      "type": "confirmation",
+      "description": "Application submitted confirmation",
+      "indicators": ["Thank you", "Application Submitted", "Successfully submitted", "Application received"]
+    }
+  },
+
+  "edges": [
+    {"from": "landing", "to": "login_or_register", "trigger": "click", "selector": "Apply Now"},
+    {"from": "login_or_register", "to": "personal_info", "trigger": "submit"},
+    {"from": "login_or_register", "to": "resume_upload", "trigger": "submit", "condition": "some employers skip personal_info if resume is parsed first"},
+    {"from": "personal_info", "to": "resume_upload", "trigger": "click", "selector": "Next"},
+    {"from": "resume_upload", "to": "experience", "trigger": "upload_complete"},
+    {"from": "resume_upload", "to": "questions", "trigger": "upload_complete", "condition": "some employers skip experience section"},
+    {"from": "experience", "to": "questions", "trigger": "click", "selector": "Next"},
+    {"from": "questions", "to": "eeo", "trigger": "click", "selector": "Next"},
+    {"from": "questions", "to": "review", "trigger": "click", "condition": "if no EEO section"},
+    {"from": "eeo", "to": "review", "trigger": "click", "selector": "Next"},
+    {"from": "review", "to": "confirmation", "trigger": "click", "selector": "Submit"}
+  ],
+
+  "fieldMappings": {
+    "firstName": {"source": "profile", "field": "first_name"},
+    "lastName": {"source": "profile", "field": "last_name"},
+    "email": {"source": "profile", "field": "email"},
+    "phone": {"source": "profile", "field": "phone"},
+    "address": {"source": "profile", "field": "address"},
+    "city": {"source": "profile", "field": "location"},
+    "state": {"source": "profile", "field": "state"},
+    "zipCode": {"source": "profile", "field": "zip_code"},
+    "country": {"source": "static", "field": "country"},
+    "resumeUpload": {"source": "file", "field": "resume_pdf"},
+    "workAuth": {"source": "profile", "field": "authorized_to_work"},
+    "sponsorship": {"source": "profile", "field": "require_sponsorship"},
+    "salary": {"source": "profile", "field": "salary_expectation"},
+    "startDate": {"source": "profile", "field": "start_date"},
+    "willingToRelocate": {"source": "profile", "field": "available_for_relocation"},
+    "currentEmployer": {"source": "profile", "field": "current_company"},
+    "currentTitle": {"source": "profile", "field": "current_role"},
+    "yearsExperience": {"source": "profile", "field": "total_years"},
+    "gender": {"source": "static", "field": "gender"},
+    "race": {"source": "static", "field": "race"},
+    "veteranStatus": {"source": "static", "field": "veteran_status"},
+    "disabilityStatus": {"source": "static", "field": "disability_status"}
+  },
+
+  "commonQuestions": [
+    {"question": "Are you authorized to work in the US?", "answer": "Yes"},
+    {"question": "Do you require sponsorship?", "answer": "Yes"},
+    {"question": "Do you require visa sponsorship?", "answer": "Yes, I will require sponsorship"},
+    {"question": "What is your highest level of education?", "answer": "Bachelor's Degree"},
+    {"question": "What is your desired salary?", "answer": "$120,000 - $150,000"},
+    {"question": "What is your earliest start date?", "answer": "Immediately"},
+    {"question": "How did you hear about this position?", "answer": "Job Board"},
+    {"question": "Are you willing to relocate?", "answer": "Yes"},
+    {"question": "How many years of experience do you have?", "answer": "5"},
+    {"question": "Do you have a criminal record?", "answer": "No"},
+    {"question": "Are you over 18 years of age?", "answer": "Yes"},
+    {"question": "Are you legally authorized to work in the United States?", "answer": "Yes"}
+  ],
+
+  "platformNotes": {
+    "accountRequired": true,
+    "resumeParsing": true,
+    "multiPage": true,
+    "typicalPageCount": "4-6",
+    "loginOptions": ["email/password", "LinkedIn", "Indeed"],
+    "knownIssues": [
+      "Auto-parse from resume may produce incorrect data — always verify",
+      "Some iCIMS instances have CAPTCHA on account creation",
+      "Session timeout can occur on long forms — save progress when possible",
+      "Apply with LinkedIn/Indeed buttons may pre-fill but not always completely"
+    ]
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "flowId": "workday",
+  "version": "1.0.0",
+  "platform": "workday",
+  "platformType": "ats",
+  "description": "Workday ATS multi-page application - typically 5-7 pages",
+
+  "nodes": {
+    "landing": {
+      "type": "page",
+      "urlPattern": ".*\\.myworkdayjobs\\.com/.*|.*workday\\.com/.*",
+      "description": "Job posting page or Workday career site"
+    },
+    "signin_prompt": {
+      "type": "page",
+      "description": "Optional sign-in prompt - can skip or create account",
+      "fields": ["email"]
+    },
+    "personal_info": {
+      "type": "form",
+      "description": "Personal information - name, email, phone, address",
+      "fields": [
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "addressLine1",
+        "city",
+        "state",
+        "postalCode",
+        "country"
+      ],
+      "nextButton": "button[data-automation-id='bottom-navigation-next-button']"
+    },
+    "resume_upload": {
+      "type": "form",
+      "description": "Resume upload and optional cover letter",
+      "fields": [
+        "resumeUpload",
+        "coverLetter"
+      ],
+      "nextButton": "button[data-automation-id='bottom-navigation-next-button']"
+    },
+    "experience": {
+      "type": "form",
+      "description": "Work experience (may auto-parse from resume)",
+      "fields": [
+        "jobTitle",
+        "company",
+        "startDate",
+        "endDate",
+        "description"
+      ],
+      "nextButton": "button[data-automation-id='bottom-navigation-next-button']"
+    },
+    "education": {
+      "type": "form",
+      "description": "Education history",
+      "fields": [
+        "degree",
+        "fieldOfStudy",
+        "school",
+        "gradYear"
+      ],
+      "nextButton": "button[data-automation-id='bottom-navigation-next-button']"
+    },
+    "work_auth_eeo": {
+      "type": "form",
+      "description": "Work authorization and EEO questions",
+      "fields": [
+        "workAuth",
+        "visaSponsorship",
+        "gender",
+        "race",
+        "veteranStatus",
+        "disabilityStatus"
+      ],
+      "nextButton": "button[data-automation-id='bottom-navigation-next-button']"
+    },
+    "custom_questions": {
+      "type": "form",
+      "description": "Company-specific custom questions",
+      "fields": ["customQuestions"],
+      "nextButton": "button[data-automation-id='bottom-navigation-next-button']"
+    },
+    "review": {
+      "type": "review",
+      "description": "Review and submit",
+      "submitButton": "button[data-automation-id='bottom-navigation-next-button']"
+    }
+  },
+
+  "edges": [
+    {"from": "landing", "to": "signin_prompt", "trigger": "click_apply"},
+    {"from": "signin_prompt", "to": "personal_info", "trigger": "click_skip_or_apply"},
+    {"from": "personal_info", "to": "resume_upload", "trigger": "click_next"},
+    {"from": "resume_upload", "to": "experience", "trigger": "click_next"},
+    {"from": "experience", "to": "education", "trigger": "click_next"},
+    {"from": "education", "to": "work_auth_eeo", "trigger": "click_next"},
+    {"from": "work_auth_eeo", "to": "custom_questions", "trigger": "click_next"},
+    {"from": "custom_questions", "to": "review", "trigger": "click_next"},
+    {"from": "review", "to": "done", "trigger": "click_submit"}
+  ],
+
+  "fieldMappings": {
+    "firstName": {"source": "profile", "field": "firstName"},
+    "lastName": {"source": "profile", "field": "lastName"},
+    "email": {"source": "profile", "field": "email"},
+    "phone": {"source": "profile", "field": "phone"},
+    "addressLine1": {"source": "profile", "field": "address"},
+    "city": {"source": "profile", "field": "city"},
+    "state": {"source": "profile", "field": "state"},
+    "postalCode": {"source": "profile", "field": "postalCode"},
+    "country": {"source": "profile", "field": "country"},
+    "resumeUpload": {"source": "role", "field": "resumePath"},
+    "degree": {"source": "profile", "field": "degree"},
+    "fieldOfStudy": {"source": "profile", "field": "field"},
+    "school": {"source": "profile", "field": "university"},
+    "gradYear": {"source": "profile", "field": "graduation"}
+  },
+
+  "commonQuestions": [
+    {"question": "Are you legally authorized to work in the United States?", "answer": "Yes"},
+    {"question": "Will you now or in the future require sponsorship for employment visa status?", "answer": "Yes"},
+    {"question": "Are you a US citizen?", "answer": "No"},
+    {"question": "What is your current visa status?", "answer": "F1 OPT (STEM)"},
+    {"question": "How did you hear about this position?", "answer": "LinkedIn/Dice"},
+    {"question": "Have you previously been employed by this company?", "answer": "No"}
+  ],
+
+  "knownFields": {
+    "firstName": {"type": "text", "required": true},
+    "lastName": {"type": "text", "required": true},
+    "email": {"type": "email", "required": true},
+    "phone": {"type": "tel", "required": true},
+    "resumeUpload": {"type": "file", "required": true, "accept": [".pdf", ".doc", ".docx"]}
+  },
+
+  "platformNotes": {
+    "workday": {
+      "requiresAccount": "sometimes - can often skip",
+      "multiPage": true,
+      "pageCount": "5-7 typical",
+      "resumeAutoParse": true,
+      "navigationButton": "data-automation-id='bottom-navigation-next-button'",
+      "eeoQuestions": "almost always present - decline all",
+      "progressBar": true
+    }
+  }
+}

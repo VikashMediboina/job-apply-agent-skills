@@ -1,0 +1,82 @@
+{
+  "instincts": [
+    {
+      "trigger": "User asks to get jobs (e.g., 'get 50 jobs for AI/ML Engineer')",
+      "action": "Load auto-job-hunt skill and validate profile + MCPs before proceeding",
+      "confidence": 0.95,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "Profile folder not found when running job scraper",
+      "action": "Ask user to run resume-profile-generator first, do not proceed without profile",
+      "confidence": 0.98,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "MCPs (Dice/Indeed) not connected when running job scraper",
+      "action": "Show setup guide with links to https://mcp.dice.com/mcp and https://mcp.indeed.com/claude/mcp, do not proceed without connected MCPs",
+      "confidence": 0.98,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "User request has multiple roles (e.g., 'AI/ML Engineer, Data Scientist')",
+      "action": "Split quantity evenly between roles, or ask user to clarify split if request mentions 'decide'",
+      "confidence": 0.85,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "User specifies source split (e.g., '60/40 dice/indeed')",
+      "action": "Use user-specified split instead of default 50/50",
+      "confidence": 0.95,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "User specifies score threshold (e.g., 'score > 70%')",
+      "action": "Use user-specified threshold instead of default 50%",
+      "confidence": 0.95,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "Scraping jobs with multiple search terms",
+      "action": "Prioritize Set 2 (Medium) and Set 3 (Narrow) search terms over Set 1 (Broad) for better quality",
+      "confidence": 0.90,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "User specifies work mode (remote/hybrid/onsite)",
+      "action": "Apply as filter in both MCP search query and scoring phase",
+      "confidence": 0.92,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "Job scoring returns red flags",
+      "action": "Auto-skip jobs with red flags regardless of score",
+      "confidence": 0.95,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "Job scraping completes (success or partial failure)",
+      "action": "Always cleanup temp/ directory before returning results",
+      "confidence": 0.98,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "User request is underspecified (missing quantity, role, or other critical info)",
+      "action": "Use ask-questions-if-underspecified skill to clarify before proceeding",
+      "confidence": 0.95,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "No jobs found after score filtering",
+      "action": "Lower threshold to 30% and notify user, rather than returning empty results",
+      "confidence": 0.80,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "Duplicate jobs found from different search terms",
+      "action": "Deduplicate by externalJobId before final output",
+      "confidence": 0.95,
+      "source": "auto-job-hunt-skill"
+    }
+  ]
+}

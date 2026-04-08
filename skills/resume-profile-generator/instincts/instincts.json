@@ -1,0 +1,94 @@
+{
+  "instincts": [
+    {
+      "id": "resume-profile-ask-visa-questions",
+      "trigger": "When extracting profile data from resume and work authorization details are missing or unclear",
+      "action": "Ask mandatory questions about work authorization status, visa sponsorship requirement, and expiration date before proceeding. Use question tool with multiple choice options for easy response.",
+      "confidence": 0.9,
+      "source": "resume-profile-generator",
+      "domain": "job-application",
+      "priority": "high"
+    },
+    {
+      "id": "resume-profile-two-level-structure",
+      "trigger": "When creating profile for a candidate with multiple target roles",
+      "action": "Separate user-level data (personal info, work auth, preferences) from role-specific data (skills, projects, experience). Create user-level folder and nested role-specific folders.",
+      "confidence": 0.85,
+      "source": "resume-profile-generator",
+      "domain": "job-application",
+      "priority": "high"
+    },
+    {
+      "id": "resume-profile-three-search-sets",
+      "trigger": "When generating job search terms for a candidate profile",
+      "action": "Always generate three search term sets: broad (general, high volume), medium (targeted, balanced), narrow (specific, best match). Default to including all three unless user specifies otherwise.",
+      "confidence": 0.95,
+      "source": "resume-profile-generator",
+      "domain": "job-application",
+      "priority": "medium"
+    },
+    {
+      "id": "resume-profile-scoring-weights",
+      "trigger": "When creating scoring criteria for job matching",
+      "action": "Apply weighted scoring: user-level fit (60%) - work auth, sponsorship, location, work mode, salary; role-level fit (40%) - skills, projects, industry, education, experience. Recommend apply at 70%+, consider at 50%+, skip below 50%.",
+      "confidence": 0.8,
+      "source": "resume-profile-generator",
+      "domain": "job-application",
+      "priority": "medium"
+    },
+    {
+      "id": "resume-profile-parallel-processing",
+      "trigger": "When user provides multiple resumes for processing",
+      "action": "Use parallel subagents to process each resume simultaneously, then aggregate results into a top-level index linking to each candidate folder.",
+      "confidence": 0.85,
+      "source": "resume-profile-generator",
+      "domain": "job-application",
+      "priority": "medium"
+    },
+    {
+      "id": "resume-profile-folder-naming",
+      "trigger": "Creating folder structure for candidate profile",
+      "action": "Use First_Last format (capitalized, underscore) for candidate folder, CamelCase for role subfolder, lowercase with hyphens for files (profile.md, scoring.md, searchterms.md).",
+      "confidence": 0.9,
+      "source": "resume-profile-generator",
+      "domain": "job-application",
+      "priority": "low"
+    },
+    {
+      "id": "resume-profile-visa-sponsorship-flex",
+      "trigger": "User mentions visa status but sponsorship requirement is ambiguous",
+      "action": "If resume shows OPT/STEM OPT, ask 'Is sponsorship mandatory or are you flexible?' If H1B, ask 'Is transfer possible or do you need new sponsorship?' Default to scoring as flexible unless explicitly stated otherwise.",
+      "confidence": 0.85,
+      "source": "resume-profile-generator",
+      "domain": "job-application",
+      "priority": "high"
+    },
+    {
+      "id": "resume-profile-section-by-section-analysis",
+      "trigger": "When analyzing a resume for profile generation",
+      "action": "NEVER analyze the entire resume at once. Process in 6 independent passes: (1) Contact & Identity, (2) Work Experience Timeline, (3) Education, (4) Skills Inventory, (5) Projects, (6) Certifications/Awards/Other. Synthesize only after all passes are complete.",
+      "confidence": 0.95,
+      "source": "resume-profile-generator",
+      "domain": "job-application",
+      "priority": "high"
+    },
+    {
+      "id": "resume-profile-timeline-role-inference",
+      "trigger": "When determining target roles for a candidate",
+      "action": "NEVER assume or pre-decide a role. Analyze the candidate's most recent 2-3 positions (last 2-3 years), identify technologies actively used and domain/industry, map to concrete role titles based on what they ACTUALLY DID (not job title). Consider career trajectory direction. Present suggested roles to user and get confirmation before generating any role-specific files.",
+      "confidence": 0.95,
+      "source": "resume-profile-generator",
+      "domain": "job-application",
+      "priority": "high"
+    },
+    {
+      "id": "resume-profile-use-extraction-script",
+      "trigger": "When a resume file (PDF, DOCX, TXT) needs text extraction",
+      "action": "Always use the Python extraction script first: python3 skills/resume-profile-generator/scripts/extract_resume.py '<path>' --sections -o '<output>'. This handles PDF fallback chain (pdfplumber -> pdfminer -> PyPDF2), DOCX heading/table preservation, and automatic section detection. Do NOT try to read PDFs directly.",
+      "confidence": 0.95,
+      "source": "resume-profile-generator",
+      "domain": "job-application",
+      "priority": "high"
+    }
+  ]
+}
