@@ -2,6 +2,62 @@
 
 This bundle provides skills and commands for automated job searching, candidate profile generation, and application automation. It works with OpenCode, Claude Code, and other AI coding agents.
 
+## Install OpenCode (Required)
+
+If you don't have OpenCode installed, follow these steps:
+
+### Option 1: macOS (Homebrew)
+
+```bash
+# Install Homebrew (if not installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install OpenCode
+brew install opencode
+```
+
+### Option 2: macOS (Direct Download)
+
+```bash
+# Download the latest version
+curl -L -o opencode.zip https://github.com/anomalyco/opencode/releases/latest/download/opencode-macos.zip
+
+# Unzip
+unzip opencode.zip
+
+# Move to PATH
+sudo mv opencode /usr/local/bin/
+
+# Or to ~/bin/
+mkdir -p ~/bin
+mv opencode ~/bin/
+
+# Add to PATH (add to ~/.zshrc or ~/.bashrc)
+export PATH="$HOME/bin:$PATH"
+```
+
+### Option 3: Linux
+
+```bash
+# Download the latest version
+curl -L -o opencode.tar.gz https://github.com/anomalyco/opencode/releases/latest/download/opencode-linux.tar.gz
+
+# Extract
+tar -xzf opencode.tar.gz
+
+# Move to PATH
+sudo mv opencode /usr/local/bin/
+```
+
+### Verify OpenCode Installation
+
+```bash
+# Check version
+opencode --version
+
+# Should show something like: opencode v0.x.x
+```
+
 ## Prerequisites
 
 Before installing, ensure you have:
@@ -500,3 +556,134 @@ rm -rf commands/resume-profile.md
 |------|----------|
 | Global | `~/.config/opencode/` |
 | Local | `./` (workspace) |
+
+---
+
+## Contributing
+
+We welcome contributions! Here's how to contribute to this project.
+
+### Ways to Contribute
+
+1. **Report bugs** - Found an issue? Let us know
+2. **Suggest features** - Have an idea? Share it
+3. **Add new skills** - Extend the automation
+4. **Improve flows** - Add new ATS platforms
+5. **Fix documentation** - Help others get started
+
+### How to Submit Contributions
+
+**Step 1: Check Existing Issues**
+
+Before creating a new issue, check if it's already reported:
+
+```bash
+# View existing issues
+open https://github.com/anomalyco/opencode/issues
+```
+
+**Step 2: Create an Issue**
+
+For bugs:
+
+```markdown
+## Bug Report
+
+**Description:**
+[What happened]
+
+**Steps to reproduce:**
+1. [Step 1]
+2. [Step 2]
+
+**Expected:**
+[What should happen]
+
+**Actual:**
+[What happened]
+
+**Environment:**
+- OS: [e.g., macOS 14]
+- OpenCode version: [e.g., v0.1.50]
+```
+
+For feature requests:
+
+```markdown
+## Feature Request
+
+**Feature name:**
+[Name]
+
+**Use case:**
+[Why do you need this?]
+
+**Proposed solution:**
+[How should it work?]
+```
+
+**Step 3: Submit a Pull Request**
+
+For code contributions:
+
+```bash
+# 1. Fork the repo
+open https://github.com/anomalyco/opencode/fork
+
+# 2. Clone your fork
+git clone https://github.com/YOUR_USERNAME/opencode.git ~/jobs-skill
+cd ~/jobs-skill
+
+# 3. Create a branch
+git checkout -b feature/my-feature
+
+# 4. Make changes
+# ... edit files ...
+
+# 5. Commit and push
+git add .
+git commit -m "Add: description"
+git push origin feature/my-feature
+
+# 6. Create PR
+open https://github.com/anomalyco/opencode/compare
+```
+
+### Contribution Guidelines
+
+- **Run tests** before submitting:
+  ```bash
+  python3 scripts/install.py --dry-run
+  ```
+
+- **Follow existing code style** - Match the patterns in the codebase
+
+- **Update documentation** - Include README changes with PRs
+
+- **Test locally** before submitting:
+  ```bash
+  # Test MCP install
+  python3 scripts/install.py --mcp-only --dry-run
+  
+  # Test skill install
+  python3 scripts/install.py --dry-run --scope local
+  ```
+
+### Code of Conduct
+
+- Be respectful and inclusive
+- Welcome newcomers
+- Help others learn and grow
+- Focus on what's best for the community
+
+### Recognition
+
+Contributors will be acknowledged in the project.
+
+---
+
+## Getting Help
+
+- **Documentation** - Start with this README
+- **Issues** - Report bugs at https://github.com/anomalyco/opencode/issues
+- **Discussions** - Ask questions at https://github.com/anomalyco/opencode/discussions
