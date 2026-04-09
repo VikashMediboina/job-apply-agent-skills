@@ -233,6 +233,47 @@ Search Dice and Indeed for jobs matching your profile, score them, and export to
 Use the auto-job-hunt skill to search for jobs.
 ```
 
+### ATS API Sources (New in v1.3.0)
+
+The auto-job-hunt skill now includes **6 additional ATS API sources** for job scraping without requiring MCP:
+
+| Source | Method | No Auth Required |
+|--------|--------|------------------|
+| Greenhouse | API | ✅ (39 company boards) |
+| Lever | API | ✅ (30 company sites) |
+| Ashby | GraphQL | ✅ (30 orgs) |
+| Workable | API | ✅ (public board) |
+| SmartRecruiters | API | ✅ (30 companies) |
+| BambooHR | Embed | ✅ (25 subdomains) |
+
+**Usage:**
+```python
+import sys
+sys.path.insert(0, '.agents/skills/flow-applicator/scripts')
+from ats_clients.greenhouse import GreenhouseClient
+from ats_clients.lever import LeverClient
+from ats_clients.ashby import AshbyClient
+from ats_clients.workable import WorkableClient
+from ats_clients.smartrecruiters import SmartRecruitersClient
+from ats_clients.bamboohr import BambooHRClient
+
+# Search jobs from any ATS
+client = GreenhouseClient()
+jobs = client.search_jobs(query='software engineer', location='remote', limit=30)
+
+client = LeverClient()
+jobs = client.search_jobs(query='engineer', location='remote', limit=20)
+
+client = AshbyClient()
+jobs = client.search_jobs(query='AI engineer', limit=20)
+
+client = SmartRecruitersClient()
+jobs = client.search_jobs('software engineer', location='remote', limit=20)
+
+client = BambooHRClient()
+jobs = client.search_jobs(query='engineer', location='remote', limit=20)
+```
+
 **Example 1: Search for data science jobs**
 ```
 Find me data science jobs in San Francisco. Use auto-job-hunt with min score 70.
@@ -266,6 +307,14 @@ Automate job applications using reusable flow graphs for ATS platforms.
 - User says "apply to jobs", "submit applications", "run applications"
 - You have a `jobs.md` file from auto-job-hunt
 - Jobs are on Dice/LinkedIn/Greenhouse/Lever/Ashby/Workday
+
+**New in v1.3.0:** The flow-applicator now supports **direct API submission** for 6 ATS platforms:
+- Greenhouse API (no browser needed)
+- Lever API (no browser needed)
+- Ashby API (no browser needed)
+- Workable API (no browser needed)
+- SmartRecruiters API (no browser needed)
+- BambooHR API (no browser needed)
 
 **How to invoke:**
 ```
