@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flow-applicator/flow-graph-v1",
+  "title": "Flow Graph Schema",
+  "description": "JSON Schema for flow-applicator flow graph files. Validates that flow JSONs conform to the expected structure before the orchestrator loads them.",
+  "type": "object",
+  "required": ["flowId", "version", "platform", "platformType", "description", "nodes", "edges"],
+  "properties": {
+    "flowId": {
+      "type": "string",
+      "description": "Unique identifier for this flow (e.g., 'greenhouse', 'lever'). Used as the filename: {flowId}.json",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of this flow definition",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "platform": {
+      "type": "string",
+      "description": "Human-readable platform name",
+      "enum": ["greenhouse", "lever", "ashby", "workday", "linkedin_easy_apply", "icims", "smartrecruiters", "workable", "custom"]
+    },
+    "platformType": {
+      "type": "string",
+      "description": "Category of the application system",
+      "enum": ["ats", "easy_apply", "custom"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of this flow"
+    },
+    "nodes": {
+      "type": "object",
+      "description": "Map of node IDs to node definitions. Each node represents a screen/state in the application.",
+      "additionalProperties": {
+        "$ref": "#/$defs/FlowNode"
+      },
+      "minProperties": 1
+    },
+    "edges": {
+      "type": "array",
+      "description": "Transitions between nodes",
+      "items": {
+        "$ref": "#/$defs/FlowEdge"
+      }
+    },
+    "fieldMappings": {
+      "type": "object",
+      "description": "Map of form field names to their data source",
+      "additionalProperties": {
+        "$ref": "#/$defs/FieldMapping"
+      }
+    },
+    "commonQuestions": {
+      "type": "array",
+      "description": "Pre-answered questions for this platform",
+      "items": {
+        "$ref": "#/$defs/CommonQuestion"
+      }
+    },
+    "knownFields": {
+      "type": "object",
+      "description": "Metadata about known form fields (selectors, default values, etc.)",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "platformNotes": {
+      "type": "object",
+      "description": "Platform-specific configuration and behavioral notes"
+    }
+  },
+  "$defs": {
+    "FlowNode": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["page", "form", "upload", "review", "confirmation", "error", "login", "captcha", "landing"],
+          "description": "The type/purpose of this page"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what this page shows"
+        },
+        "urlPattern": {
+          "type": "string",
+          "description": "Regex pattern to match this page's URL"
+        },
+        "fields": {
+          "type": "array",
+          "description": "Expected form field names/labels on this page",
+          "items": {
+            "type": "string"
+          }
+        },
+        "elements": {
+          "type": "object",
+          "description": "Named page elements (headings, sections, etc.)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "nextButton": {
+          "type": "string",
+          "description": "Selector or ref for the Next/Continue button"
+        },
+        "submitButton": {
+          "type": "string",
+          "description": "Selector or ref for the Submit/Apply button"
+        },
+        "waitFor": {
+          "type": "string",
+          "description": "Element or text to wait for before considering page loaded"
+        },
+        "sisters": {
+          "type": "array",
+          "description": "Variant nodes for deviations from the standard flow",
+          "items": {
+            "type": "object",
+            "required": ["id", "condition"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Sister node ID"
+              },
+              "condition": {
+                "type": "string",
+                "description": "When this sister node applies instead of the parent"
+              },
+              "node": {
+                "$ref": "#/$defs/FlowNode",
+                "description": "The sister node definition"
+              }
+            }
+          }
+        }
+      }
+    },
+    "FlowEdge": {
+      "type": "object",
+      "required": ["from", "to", "trigger"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Source node ID"
+        },
+        "to": {
+          "type": "string",
+          "description": "Destination node ID"
+        },
+        "trigger": {
+          "type": "string",
+          "description": "What causes this transition",
+          "enum": ["click_apply", "click_next", "click_submit", "click_continue", "click_review", "auto_redirect", "page_load", "upload_complete"]
+        },
+        "condition": {
+          "type": "string",
+          "description": "Optional condition for branching (e.g., 'has_additional_questions')"
+        }
+      }
+    },
+    "FieldMapping": {
+      "type": "object",
+      "required": ["source", "field"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Where to pull the value from",
+          "enum": ["profile", "role", "template", "generated", "static"]
+        },
+        "field": {
+          "type": "string",
+          "description": "The key in the source data (e.g., 'email', 'first_name')"
+        },
+        "transform": {
+          "type": "string",
+          "description": "Optional transform to apply (e.g., 'split_first', 'format_phone')"
+        }
+      }
+    },
+    "CommonQuestion": {
+      "type": "object",
+      "required": ["question", "answer"],
+      "properties": {
+        "question": {
+          "type": "string",
+          "description": "The question text (or pattern)"
+        },
+        "answer": {
+          "type": "string",
+          "description": "The pre-defined answer"
+        },
+        "matchType": {
+          "type": "string",
+          "description": "How to match the question",
+          "enum": ["exact", "fuzzy", "regex"],
+          "default": "fuzzy"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "dice": {
+      "type": "sse",
+      "url": "https://mcp.dice.com/mcp",
+      "note": "Dice Job Search MCP — requires authentication. Run: opencode mcp auth dice"
+    },
+    "indeed": {
+      "type": "sse",
+      "url": "https://mcp.indeed.com/claude/mcp",
+      "note": "Indeed Job Search MCP — requires authentication. Run: opencode mcp auth indeed"
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "note": "Playwright browser automation MCP — required for flow-applicator and scraping-based job sources"
+    }
+  }
+}

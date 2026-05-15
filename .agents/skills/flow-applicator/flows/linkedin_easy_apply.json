@@ -1,0 +1,191 @@
+{
+  "flowId": "linkedin_easy_apply",
+  "version": "1.0.0",
+  "platform": "linkedin",
+  "platformType": "easy_apply",
+  "description": "LinkedIn Easy Apply multi-page form with contact info, work authorization, and review",
+
+  "nodes": {
+    "landing": {
+      "type": "page",
+      "urlPattern": "linkedin.com/jobs/view/.*",
+      "description": "Job detail page with Easy Apply button",
+      "elements": {
+        "easyApplyButton": {
+          "selector": "button[data-control-name='apply']",
+          "action": "click"
+        }
+      }
+    },
+    "form_page_1": {
+      "type": "form",
+      "description": "Contact information + resume upload",
+      "fields": [
+        "fullName",
+        "email",
+        "phone",
+        "resumeUpload"
+      ],
+      "nextButton": "button[aria-label='Continue to next step']",
+      "waitFor": ".jobs-easy-apply-modal"
+    },
+    "form_page_2": {
+      "type": "form",
+      "description": "Work experience summary",
+      "fields": [
+        "experienceYears",
+        "currentTitle",
+        "currentCompany"
+      ],
+      "nextButton": "button[aria-label='Continue to next step']"
+    },
+    "form_page_3": {
+      "type": "form",
+      "description": "Education",
+      "fields": [
+        "highestDegree",
+        "graduationYear"
+      ],
+      "nextButton": "button[aria-label='Continue to next step']"
+    },
+    "form_page_4": {
+      "type": "form",
+      "description": "Work authorization",
+      "fields": [
+        "workAuth",
+        "visaSponsorship",
+        "sponsorshipTimeline"
+      ],
+      "nextButton": "button[aria-label='Continue to next step']"
+    },
+    "review": {
+      "type": "form",
+      "description": "Review application and submit",
+      "submitButton": "button[aria-label='Submit application']",
+      "waitFor": ".jobs-easy-apply-review"
+    }
+  },
+
+  "edges": [
+    {
+      "from": "landing",
+      "to": "form_page_1",
+      "trigger": "click_easy_apply"
+    },
+    {
+      "from": "form_page_1",
+      "to": "form_page_2",
+      "trigger": "click_next"
+    },
+    {
+      "from": "form_page_2",
+      "to": "form_page_3",
+      "trigger": "click_next"
+    },
+    {
+      "from": "form_page_3",
+      "to": "form_page_4",
+      "trigger": "click_next"
+    },
+    {
+      "from": "form_page_4",
+      "to": "review",
+      "trigger": "click_next"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "trigger": "click_submit"
+    }
+  ],
+
+  "fieldMappings": {
+    "fullName": {
+      "source": "profile",
+      "field": "name"
+    },
+    "email": {
+      "source": "profile",
+      "field": "email"
+    },
+    "phone": {
+      "source": "profile",
+      "field": "phone"
+    },
+    "resumeUpload": {
+      "source": "role",
+      "field": "resumePath"
+    },
+    "experienceYears": {
+      "source": "profile",
+      "field": "yearsOfExperience"
+    },
+    "highestDegree": {
+      "source": "profile",
+      "field": "degree"
+    },
+    "graduationYear": {
+      "source": "profile",
+      "field": "graduationYear"
+    },
+    "workAuth": {
+      "source": "template",
+      "field": "workAuthorization"
+    },
+    "visaSponsorship": {
+      "source": "template",
+      "field": "visaSponsorship"
+    }
+  },
+
+  "commonQuestions": [
+    {
+      "question": "Are you legally authorized to work in the US?",
+      "answer": "Yes"
+    },
+    {
+      "question": "Do you require visa sponsorship?",
+      "answer": "Yes, I will require sponsorship in the future"
+    },
+    {
+      "question": "Are you a US citizen?",
+      "answer": "No"
+    },
+    {
+      "question": "What is your current work authorization?",
+      "answer": "F1 OPT (STEM)"
+    }
+  ],
+
+  "knownFields": {
+    "fullName": {
+      "type": "text",
+      "required": true,
+      "labelPatterns": ["full name", "name", "first and last name"]
+    },
+    "email": {
+      "type": "email",
+      "required": true,
+      "labelPatterns": ["email", "email address", "e-mail"]
+    },
+    "phone": {
+      "type": "tel",
+      "required": false,
+      "labelPatterns": ["phone", "phone number", "mobile"]
+    },
+    "resumeUpload": {
+      "type": "file",
+      "required": true,
+      "accept": [".pdf", ".doc", ".docx"],
+      "labelPatterns": ["resume", "cv", "upload resume"]
+    }
+  },
+
+  "platformNotes": {
+    "linkedinEasyApply": {
+      "maxApplications": "5 per day warning",
+      "followCheckbox": "uncheck before submit",
+      "rateLimit": "60 applications per week"
+    }
+  }
+}

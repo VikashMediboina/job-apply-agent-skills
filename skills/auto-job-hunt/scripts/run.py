@@ -11,20 +11,64 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cleanup import cleanup_temp, ensure_jobs_dir, get_output_paths
-from csv_generator import consolidate_jobs, create_status_log, jobs_to_xlsx
+from csv_generator import consolidate_jobs, create_status_log
 from md_generator import create_status_log as create_status_log_md, jobs_to_markdown
 from paths import jobs_by_date_dir, role_file
 from planner import create_distribution_plan, load_search_terms, parse_request
 from scorer import score_jobs
+from source_metrics import post_session_hook
 from validate_links import validate_role_bundle, validate_skill_files
 from validate_mcps import validate_all_mcps
 from validate_profile import validate_profile
 
 
+def _build_source_results(scored: list, plan: list) -> dict:
+    """Build per-source results dict for the status log.
+
+    Groups scored jobs by their 'source' field and merges with plan targets.
+    Supports all 8 sources: dice, indeed, greenhouse, lever, ashby,
+    workable, smartrecruiters, bamboohr.
+
+    Args:
+        scored: List of scored job dicts (each has a 'source' field).
+        plan: List of RolePlan objects from create_distribution_plan().
+
+    Returns:
+        Dict mapping source slug → {scraped, filtered, jobs, target}.
+    """
+    # Build target quantities from the plan
+    targets: dict[str, int] = {}
+    for role_plan in plan:
+        for source_plan in role_plan.sources:
+            targets[source_plan.source] = (
+                targets.get(source_plan.source, 0) + source_plan.quantity
+            )
+
+    # Group scored jobs by source
+    by_source: dict[str, list] = {}
+    for job in scored:
+        src = job.get("source", "unknown")
+        by_source.setdefault(src, []).append(job)
+
+    # Merge: every source in plan gets an entry (even if 0 jobs)
+    all_sources = set(targets.keys()) | set(by_source.keys())
+    results: dict[str, dict] = {}
+    for src in all_sources:
+        src_jobs = by_source.get(src, [])
+        results[src] = {
+            "scraped": len(src_jobs),
+            "filtered": len(src_jobs),
+            "jobs": src_jobs,
+            "target": targets.get(src, 0),
+        }
+
+    return results
+
+
 def run(
     request: str, username: str, role: str, job_files: list[str] | None = None
 ) -> dict:
-    """Validate, plan, score, export to XLSX, and cleanup."""
+    """Validate, plan, score, export to markdown, and cleanup."""
     if not validate_skill_files()["valid"]:
         raise RuntimeError("Skill tree is incomplete")
 
@@ -41,8 +85,17 @@ def run(
         raise RuntimeError("Candidate user_qna.md is missing")
 
     mcps = validate_all_mcps()
-    if not mcps["valid"]:
-        raise RuntimeError("No job board MCP is connected (Dice/Indeed)")
+    mcp_available = mcps["valid"]
+    if not mcp_available:
+        import warnings
+
+        warnings.warn(
+            "No job board MCP is connected (Dice/Indeed). "
+            "Falling back to ATS-only mode (Greenhouse, Lever, Ashby, Workable, "
+            "SmartRecruiters, BambooHR). "
+            "Setup Dice: https://mcp.dice.com/mcp  "
+            "Setup Indeed: https://mcp.indeed.com/claude/mcp"
+        )
 
     params = parse_request(request)
 
@@ -105,19 +158,22 @@ def run(
             "visa_status": params.visa_status,
             "score_threshold": params.score_threshold,
         },
-        results={
-            "dice": {
-                "scraped": len(jobs),
-                "filtered": len(scored),
-                "jobs": scored,
-                "target": 0,
-            },
-            "indeed": {"scraped": 0, "filtered": 0, "jobs": [], "target": 0},
-        },
+        results=_build_source_results(scored, plan),
         md_dir=str(output_paths["xlsx"].parent),
         status_dir=output_paths["status"].parent,
         timestamp=timestamp,
     )
+
+    # --- Learning hook: record session metrics ---
+    try:
+        metrics_result = post_session_hook(
+            scored_jobs=scored,
+            request=request,
+            priority=params.priority,
+            roles=params.roles,
+        )
+    except Exception:
+        metrics_result = {}  # Don't break the pipeline if metrics fail
 
     cleanup_temp()
     return {
@@ -126,6 +182,7 @@ def run(
         "index_md": str(output_paths["xlsx"].parent / "index.md"),
         "status": status_path_md,
         "plan": plan,
+        "metrics": metrics_result,
     }
 
 
@@ -143,4 +200,4 @@ if __name__ == "__main__":
     _job_files = sys.argv[4:] or None
 
     result = run(_request, _username, _role, _job_files)
-    print(result["xlsx"])
+    print(result["jobs_md"])

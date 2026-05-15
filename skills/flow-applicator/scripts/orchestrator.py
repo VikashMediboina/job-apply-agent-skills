@@ -130,9 +130,16 @@ def _parse_job_cards(content: str) -> list[JobCard]:
         jobs = _parse_format_a(content)
     elif re.search(r"^###\s+\d+\.\s+", content, re.MULTILINE):
         jobs = _parse_format_b(content)
+    elif re.search(r"^###\s+.+$", content, re.MULTILINE) and "|" in content:
+        # Table-style format with company headings and markdown tables
+        jobs = _parse_table_format(content)
     else:
-        # Try both formats
-        jobs = _parse_format_a(content) or _parse_format_b(content)
+        # Try known parsers in order
+        jobs = (
+            _parse_format_a(content)
+            or _parse_format_b(content)
+            or _parse_table_format(content)
+        )
 
     return jobs
 
@@ -260,6 +267,109 @@ def _parse_format_b(content: str) -> list[JobCard]:
 
         if job.title:
             jobs.append(job)
+
+    return jobs
+
+
+def _parse_table_format(content: str) -> list[JobCard]:
+    """Parse table-style jobs.md where companies are headings (### Company)
+
+    Example section:
+    ### Anthropic (AI/ML Company)
+
+    | # | Title | Location | Work Type | URL |
+    |---|-------|-----------|---------|-----|
+    | 1 | Applied AI Engineer (Startups) | SF/NYC | Hybrid | https://... |
+    """
+    jobs: list[JobCard] = []
+    current_company = ""
+    lines = content.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        # Company heading
+        m = re.match(r"^###\s+(.+)$", line)
+        if m:
+            # Use the heading text as company name (strip parenthetical)
+            heading = m.group(1).strip()
+            # Keep only the main company name before any parentheses or hyphen
+            current_company = re.split(r"\s*\(|\s*-\s*", heading)[0].strip()
+            i += 1
+            continue
+
+        # Table header detection (must contain 'URL' and 'Title')
+        if line.startswith("|") and "url" in line.lower() and "title" in line.lower():
+            # Parse header cells to discover column indices
+            header_cells = [
+                c.strip().lower() for c in line.strip().strip("|").split("|")
+            ]
+            # build mapping
+            mapping = {}
+            for idx, name in enumerate(header_cells):
+                if "title" in name:
+                    mapping["title"] = idx
+                elif "location" in name:
+                    mapping["location"] = idx
+                elif "work type" in name or "work_type" in name or "work type" in name:
+                    mapping["work_type"] = idx
+                elif "url" in name:
+                    mapping["url"] = idx
+                elif name.strip().startswith("#"):
+                    mapping["index"] = idx
+
+            # skip the separator line if present
+            i += 1
+            # consume table rows
+            while i < len(lines):
+                row = lines[i].strip()
+                if not row.startswith("|"):
+                    break
+                # ignore divider lines like |---|
+                if re.match(r"^\|\s*-+", row):
+                    i += 1
+                    continue
+                cells = [c.strip() for c in row.strip().strip("|").split("|")]
+                # ensure url exists in cells
+                url = ""
+                if "url" in mapping and mapping["url"] < len(cells):
+                    url = cells[mapping["url"]]
+                # sometimes URL is the last cell and may not be labeled; try to find http
+                if not url or not url.startswith("http"):
+                    for c in cells:
+                        if c.startswith("http"):
+                            url = c
+                            break
+
+                if url:
+                    title = (
+                        cells[mapping.get("title", 1)]
+                        if mapping.get("title", 1) < len(cells)
+                        else ""
+                    )
+                    location = (
+                        cells[mapping.get("location", 2)]
+                        if mapping.get("location", 2) < len(cells)
+                        else ""
+                    )
+                    work_type = (
+                        cells[mapping.get("work_type", 3)]
+                        if mapping.get("work_type", 3) < len(cells)
+                        else ""
+                    )
+                    job = JobCard(
+                        title=title,
+                        company=current_company,
+                        location=location,
+                        work_type=work_type,
+                        apply_url=url,
+                        score=100,
+                        raw_text=row,
+                    )
+                    jobs.append(job)
+                i += 1
+            continue
+
+        i += 1
 
     return jobs
 

@@ -2,7 +2,7 @@
   "instincts": [
     {
       "trigger": "User asks to get jobs (e.g., 'get 50 jobs for AI/ML Engineer')",
-      "action": "Load auto-job-hunt skill and validate profile + MCPs before proceeding",
+      "action": "Load auto-job-hunt skill and validate profile exists before proceeding — do NOT check or validate MCPs",
       "confidence": 0.95,
       "source": "auto-job-hunt-skill"
     },
@@ -13,9 +13,9 @@
       "source": "auto-job-hunt-skill"
     },
     {
-      "trigger": "MCPs (Dice/Indeed) not connected when running job scraper",
-      "action": "Show setup guide with links to https://mcp.dice.com/mcp and https://mcp.indeed.com/claude/mcp, do not proceed without connected MCPs",
-      "confidence": 0.98,
+      "trigger": "MCPs (Dice/Indeed) unavailable or not connected",
+      "action": "Silently skip those sources and continue with remaining sources — never warn, never stop, never check MCPs before starting",
+      "confidence": 0.99,
       "source": "auto-job-hunt-skill"
     },
     {
@@ -75,6 +75,72 @@
     {
       "trigger": "Duplicate jobs found from different search terms",
       "action": "Deduplicate by externalJobId before final output",
+      "confidence": 0.95,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "User wants AI/ML, LLM, or ML engineering roles",
+      "action": "Prioritize Ashby source — it covers OpenAI, Anthropic, Mistral, Cohere, and most AI-native startups",
+      "confidence": 0.90,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "User wants fulltime engineering roles at tech companies",
+      "action": "Prioritize Greenhouse and Lever — they cover the majority of tech startups and mid-stage companies",
+      "confidence": 0.90,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "BambooHR returns 0 results for generic tech queries",
+      "action": "This is expected — BambooHR only works with specific known company subdomains. Lower its priority and skip if companies list is empty",
+      "confidence": 0.95,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "SmartRecruiters returns retail or non-tech company results",
+      "action": "This is expected — SmartRecruiters skews toward enterprise/retail (IKEA, Walmart, McDonald's). Deprioritize for pure tech roles; use Greenhouse/Lever/Ashby first",
+      "confidence": 0.85,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "Greenhouse source is running slowly (>10s per run)",
+      "action": "Expected behavior — Greenhouse probes up to 39 boards sequentially. Allow 10-30s. Do not timeout prematurely.",
+      "confidence": 0.90,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "ATS raw job has createdAt field as a large integer (Unix ms)",
+      "action": "This is a Lever timestamp in Unix milliseconds. Convert with: datetime.fromtimestamp(createdAt / 1000).isoformat() — divide by 1000, not 1",
+      "confidence": 0.98,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "ATS job normalization: Lever job title field",
+      "action": "Lever uses 'text' for the job title, NOT 'title'. Map job['text'] → canonical title field",
+      "confidence": 0.98,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "ATS job normalization: SmartRecruiters job title field",
+      "action": "SmartRecruiters uses 'name' for the job title, NOT 'title'. Map job['name'] → canonical title field",
+      "confidence": 0.98,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "ATS normalization: always prefix IDs to avoid cross-source collisions",
+      "action": "Prefix every ATS job ID with the platform slug: 'greenhouse:123', 'lever:abc', 'ashby:xyz', etc.",
+      "confidence": 0.95,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "User wants international or remote-first roles",
+      "action": "Include Workable source — it covers a large share of European, LATAM, and APAC companies alongside US companies",
+      "confidence": 0.85,
+      "source": "auto-job-hunt-skill"
+    },
+    {
+      "trigger": "Deduplication across sources needed after aggregation",
+      "action": "Deduplicate using: same id OR same applyUrl OR same (company.name + title + location.formatted). Keep the higher-scored duplicate.",
       "confidence": 0.95,
       "source": "auto-job-hunt-skill"
     }

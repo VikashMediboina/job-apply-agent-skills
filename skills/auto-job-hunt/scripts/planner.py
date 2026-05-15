@@ -1,10 +1,37 @@
 #!/usr/bin/env python3
-"""Planning module for job distribution and request parsing."""
+"""Planning module for job distribution, request parsing, and source allocation.
+
+Supports dynamic allocation across MCP sources (Dice, Indeed) and ATS API
+clients (Greenhouse, Lever, Ashby, Workable, SmartRecruiters, BambooHR)
+based on user priority (contract/fulltime/diverse/premium).
+"""
 
 import re
-from dataclasses import dataclass
+import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+# ---------------------------------------------------------------------------
+# Ensure ats_clients is importable (skill root → parent of scripts/)
+# ---------------------------------------------------------------------------
+_SKILL_ROOT = Path(__file__).resolve().parent.parent
+if str(_SKILL_ROOT) not in sys.path:
+    sys.path.insert(0, str(_SKILL_ROOT))
+
+try:
+    from ats_clients import ATS_REGISTRY, platforms_for_job_type
+except ImportError:
+    # Graceful degradation if ats_clients not installed
+    ATS_REGISTRY = {}
+
+    def platforms_for_job_type(job_type: str) -> list[str]:
+        return []
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# Data classes
+# ───────────────────────────────────────────────────────────────────────────
 
 
 @dataclass
@@ -20,6 +47,10 @@ class RequestParams:
     work_mode: str = "Flexible"
     score_threshold: int = 50
     source_split: str = "50/50"
+    # NEW: priority drives source allocation strategy
+    priority: str = "diverse"  # contract | fulltime | diverse | premium
+    # NEW: explicit employment type (contract, fulltime, c2h, w2)
+    employment_type: Optional[str] = None
 
 
 @dataclass
@@ -33,11 +64,16 @@ class SearchTerm:
 
 @dataclass
 class SourcePlan:
-    """Plan for a single source."""
+    """Plan for a single source (MCP or ATS API)."""
 
-    source: str  # dice or indeed
-    quantity: int
-    search_terms: list[SearchTerm]
+    source: str  # "dice", "indeed", or ATS slug ("greenhouse", "lever", etc.)
+    source_type: str = "mcp"  # "mcp" or "ats_api"
+    quantity: int = 0
+    search_terms: list[SearchTerm] = field(default_factory=list)
+    # ATS-specific: which companies/boards to search
+    companies: list[str] = field(default_factory=list)
+    # Weight 0-100 — higher means this source gets more allocation
+    weight: int = 50
 
 
 @dataclass
@@ -46,7 +82,242 @@ class RolePlan:
 
     role: str
     quantity: int
-    sources: list[SourcePlan]
+    sources: list[SourcePlan] = field(default_factory=list)
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# Source Allocator
+# ───────────────────────────────────────────────────────────────────────────
+
+# Default allocation profiles: maps priority → {source: weight}
+# Weights are relative; they get normalized to percentages at allocation time.
+ALLOCATION_PROFILES: dict[str, dict[str, int]] = {
+    "contract": {
+        # Contract → Dice is king for contract roles; Indeed secondary;
+        # ATS platforms rarely list contract positions
+        "dice": 60,
+        "indeed": 25,
+        "greenhouse": 5,
+        "lever": 5,
+        "ashby": 3,
+        "workable": 2,
+        "smartrecruiters": 0,
+        "bamboohr": 0,
+    },
+    "fulltime": {
+        # Fulltime → ATS platforms are primary; Dice/Indeed for volume
+        "dice": 15,
+        "indeed": 15,
+        "greenhouse": 20,
+        "lever": 15,
+        "ashby": 15,
+        "workable": 10,
+        "smartrecruiters": 5,
+        "bamboohr": 5,
+    },
+    "diverse": {
+        # Diverse → balanced across everything
+        "dice": 25,
+        "indeed": 20,
+        "greenhouse": 15,
+        "lever": 12,
+        "ashby": 10,
+        "workable": 8,
+        "smartrecruiters": 5,
+        "bamboohr": 5,
+    },
+    "premium": {
+        # Premium → top-tier ATS only (startup/tech companies)
+        "dice": 10,
+        "indeed": 5,
+        "greenhouse": 30,
+        "lever": 25,
+        "ashby": 20,
+        "workable": 5,
+        "smartrecruiters": 5,
+        "bamboohr": 0,
+    },
+}
+
+
+class SourceAllocator:
+    """Dynamically allocates job search quota across MCP + ATS sources.
+
+    Allocation logic:
+    1. Read the user's priority (contract/fulltime/diverse/premium)
+    2. Load the corresponding allocation profile (weights per source)
+    3. Normalize weights → percentages → quantity per source
+    4. Skip sources with weight=0 or no available companies
+    5. Return a list of SourcePlan objects
+
+    The allocator respects a legacy source_split (e.g. "60/40") when the user
+    explicitly specifies it — in that case, only dice+indeed are used and ATS
+    is disabled (backward-compatible behavior).
+    """
+
+    def __init__(
+        self,
+        priority: str = "diverse",
+        explicit_split: Optional[str] = None,
+        min_per_source: int = 3,
+        use_learned_weights: bool = True,
+    ):
+        self.priority = priority
+        self.explicit_split = explicit_split
+        self.min_per_source = min_per_source
+        self.use_learned_weights = use_learned_weights
+
+    def allocate(
+        self,
+        total_quantity: int,
+        search_terms: list[SearchTerm],
+    ) -> list[SourcePlan]:
+        """Produce a list of SourcePlan based on priority and quantity.
+
+        Args:
+            total_quantity: Total jobs to find.
+            search_terms: Available search terms for all sources.
+
+        Returns:
+            List of SourcePlan, one per active source.
+        """
+        # Legacy mode: user explicitly set "60/40" → dice/indeed only
+        if self.explicit_split and self._is_legacy_split(self.explicit_split):
+            return self._legacy_allocate(total_quantity, search_terms)
+
+        # Dynamic allocation based on priority profile
+        # Try learned weights first (from source_metrics), fall back to defaults
+        profile = None
+        if self.use_learned_weights:
+            try:
+                from source_metrics import get_adjusted_profile
+
+                profile = get_adjusted_profile(self.priority)
+            except ImportError:
+                pass
+        if profile is None:
+            profile = ALLOCATION_PROFILES.get(
+                self.priority, ALLOCATION_PROFILES["diverse"]
+            )
+
+        # Filter out zero-weight sources and check ATS availability
+        active: dict[str, int] = {}
+        for source, weight in profile.items():
+            if weight <= 0:
+                continue
+            # ATS sources need at least 1 known company
+            if source in ATS_REGISTRY:
+                if len(ATS_REGISTRY[source].known_companies) == 0:
+                    continue
+            active[source] = weight
+
+        if not active:
+            # Fallback to dice/indeed only
+            return self._legacy_allocate(total_quantity, search_terms)
+
+        # Normalize weights to quantities
+        total_weight = sum(active.values())
+        plans: list[SourcePlan] = []
+
+        allocated = 0
+        source_list = sorted(active.keys(), key=lambda s: active[s], reverse=True)
+
+        for source in source_list:
+            weight = active[source]
+            pct = weight / total_weight
+            qty = max(self.min_per_source, int(total_quantity * pct))
+
+            # Don't over-allocate
+            if allocated + qty > total_quantity:
+                qty = total_quantity - allocated
+            if qty <= 0:
+                continue
+
+            is_ats = source in ATS_REGISTRY
+            companies = []
+            if is_ats:
+                companies = list(ATS_REGISTRY[source].known_companies)
+
+            plans.append(
+                SourcePlan(
+                    source=source,
+                    source_type="ats_api" if is_ats else "mcp",
+                    quantity=qty,
+                    search_terms=search_terms[:4],
+                    companies=companies,
+                    weight=weight,
+                )
+            )
+            allocated += qty
+
+        # Distribute any remainder to the highest-weight source
+        remainder = total_quantity - allocated
+        if remainder > 0 and plans:
+            plans[0].quantity += remainder
+
+        return plans
+
+    def _is_legacy_split(self, split: str) -> bool:
+        """Check if the split string is a legacy dice/indeed split."""
+        return bool(re.match(r"^\d+/\d+$", split))
+
+    def _legacy_allocate(
+        self,
+        total_quantity: int,
+        search_terms: list[SearchTerm],
+    ) -> list[SourcePlan]:
+        """Original dice/indeed-only allocation for backward compat."""
+        split = self.explicit_split or "50/50"
+        dice_pct, indeed_pct = map(int, split.split("/"))
+        dice_qty = int(total_quantity * dice_pct / 100)
+        indeed_qty = total_quantity - dice_qty
+
+        plans = []
+        if dice_qty > 0:
+            plans.append(
+                SourcePlan(
+                    source="dice",
+                    source_type="mcp",
+                    quantity=dice_qty,
+                    search_terms=search_terms[:4],
+                    weight=dice_pct,
+                )
+            )
+        if indeed_qty > 0:
+            plans.append(
+                SourcePlan(
+                    source="indeed",
+                    source_type="mcp",
+                    quantity=indeed_qty,
+                    search_terms=search_terms[:4],
+                    weight=indeed_pct,
+                )
+            )
+        return plans
+
+    def summary(self, plans: list[SourcePlan]) -> str:
+        """Human-readable summary of the allocation."""
+        lines = [
+            f"Source Allocation (priority={self.priority})",
+            "-" * 50,
+        ]
+        total = sum(p.quantity for p in plans)
+        for plan in plans:
+            pct = (plan.quantity / total * 100) if total else 0
+            companies_str = (
+                f" ({len(plan.companies)} companies)" if plan.companies else ""
+            )
+            lines.append(
+                f"  {plan.source:18s} [{plan.source_type:7s}] "
+                f"{plan.quantity:4d} jobs ({pct:5.1f}%){companies_str}"
+            )
+        lines.append(f"  {'TOTAL':18s} {'':9s} {total:4d} jobs")
+        return "\n".join(lines)
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# Request parsing
+# ───────────────────────────────────────────────────────────────────────────
 
 
 def parse_request(request: str, default_quantity: int = 50) -> RequestParams:
@@ -56,33 +327,69 @@ def parse_request(request: str, default_quantity: int = 50) -> RequestParams:
     Supported formats:
     - "Get 50 jobs for AI/ML Engineer"
     - "Get 50 jobs for AI/ML Engineer, remote, Boston"
-    - "Get 50 jobs for AI/ML Engineer, Data Scientist"
+    - "Get 100 jobs for AI/ML Engineer, Data Scientist"
     - "Get jobs for AI/ML Engineer" (uses default quantity)
+    - "Get 50 contract jobs for DevOps Engineer"          # priority=contract
+    - "Get 50 fulltime jobs for Full Stack Engineer"       # priority=fulltime
+    - "Get 50 premium jobs for ML Engineer"                # priority=premium
     """
     request = request.strip()
 
     # Default values
-    roles = []
+    roles: list[str] = []
     quantity = default_quantity
     timeline = "24hrs"
-    location = None
-    visa_status = None
-    visa_required = None
+    location: Optional[str] = None
+    visa_status: Optional[str] = None
+    visa_required: Optional[bool] = None
     work_mode = "Flexible"
     score_threshold = 50
     source_split = "50/50"
+    priority = "diverse"
+    employment_type: Optional[str] = None
 
     # Extract quantity (supports both "10 jobs" and "10jobs")
     quantity_match = re.search(r"(\d+)\s*job", request, re.IGNORECASE)
     if quantity_match:
         quantity = int(quantity_match.group(1))
 
+    # Extract priority / employment type
+    priority_match = re.search(
+        r"\b(contract|fulltime|full[- ]time|diverse|premium)\b",
+        request,
+        re.IGNORECASE,
+    )
+    if priority_match:
+        raw = priority_match.group(1).lower().replace("-", "").replace(" ", "")
+        if raw in ("contract",):
+            priority = "contract"
+            employment_type = "contract"
+        elif raw in ("fulltime",):
+            priority = "fulltime"
+            employment_type = "fulltime"
+        elif raw == "premium":
+            priority = "premium"
+        elif raw == "diverse":
+            priority = "diverse"
+
+    # Also detect c2h / w2 employment types
+    emp_match = re.search(r"\b(c2h|w2|c2c)\b", request, re.IGNORECASE)
+    if emp_match:
+        employment_type = emp_match.group(1).upper()
+        if not priority_match:
+            priority = "contract"  # c2h/w2/c2c implies contract priority
+
     # Extract roles (after "for" keyword)
     role_match = re.search(r"for\s+([^,]+)", request, re.IGNORECASE)
     if role_match:
         role_str = role_match.group(1).strip()
-        # Handle multiple roles separated by comma or "and"
-        roles = [r.strip() for r in re.split(r"[,/and]+", role_str)]
+        # Remove any priority words that leaked into the role string
+        for word in ["contract", "fulltime", "full-time", "diverse", "premium"]:
+            role_str = re.sub(rf"\b{word}\b", "", role_str, flags=re.IGNORECASE)
+        role_str = role_str.strip()
+        # Handle multiple roles separated by comma or " and "
+        # NOTE: Do NOT split on "/" — role names like "AI/ML Engineer" use it.
+        roles = [r.strip() for r in re.split(r",|\band\b", role_str) if r.strip()]
 
     # Extract timeline
     timeline_match = re.search(r"(\d+)\s*(hr|hour|day|week)s?", request, re.IGNORECASE)
@@ -113,7 +420,7 @@ def parse_request(request: str, default_quantity: int = 50) -> RequestParams:
     if score_match:
         score_threshold = int(score_match.group(1))
 
-    # Extract source split
+    # Extract explicit source split (legacy)
     split_match = re.search(r"(\d+)/(\d+)\s*(dice|indeed)", request, re.IGNORECASE)
     if split_match:
         dice_pct = int(split_match.group(1))
@@ -129,7 +436,14 @@ def parse_request(request: str, default_quantity: int = 50) -> RequestParams:
         work_mode=work_mode,
         score_threshold=score_threshold,
         source_split=source_split,
+        priority=priority,
+        employment_type=employment_type,
     )
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# Distribution plan
+# ───────────────────────────────────────────────────────────────────────────
 
 
 def create_distribution_plan(
@@ -140,79 +454,76 @@ def create_distribution_plan(
     """
     Create job distribution plan for all roles.
 
+    Uses SourceAllocator for dynamic allocation across MCP + ATS sources
+    when no explicit source_split is given. Falls back to legacy dice/indeed
+    split when the user specifies "60/40" etc.
+
     Args:
         request_params: Parsed request parameters
         role_search_terms: Dict mapping role -> list of SearchTerms
-        source_split: Override source split (e.g., "50/50", "60/40")
+        source_split: Override source split (e.g., "50/50", "60/40").
+                      If set, forces legacy dice/indeed-only mode.
 
     Returns:
         List of RolePlan
     """
-    if not source_split:
-        source_split = request_params.source_split
+    # Determine if we're in legacy mode or dynamic mode
+    explicit_split = source_split or (
+        request_params.source_split if request_params.source_split != "50/50" else None
+    )
 
-    # Parse source split
-    dice_pct, indeed_pct = map(int, source_split.split("/"))
+    # If user explicitly set a split AND no priority override, use legacy
+    # If user set a priority, use dynamic allocation
+    use_dynamic = (
+        request_params.priority != "diverse"
+        or explicit_split is None
+        or bool(ATS_REGISTRY)
+    )
 
-    plans = []
+    allocator = SourceAllocator(
+        priority=request_params.priority,
+        explicit_split=explicit_split if not use_dynamic else None,
+    )
+
+    plans: list[RolePlan] = []
     roles = request_params.roles
 
     if len(roles) == 1:
-        # Single role - use full quantity
         role = roles[0]
-        dice_qty = int(request_params.quantity * dice_pct / 100)
-        indeed_qty = request_params.quantity - dice_qty
-
         terms = role_search_terms.get(role, [])
-        dice_terms = terms[:4]  # max 4 per source
-        indeed_terms = terms[:4]
+        source_plans = allocator.allocate(request_params.quantity, terms)
 
         plans.append(
             RolePlan(
                 role=role,
                 quantity=request_params.quantity,
-                sources=[
-                    SourcePlan(
-                        source="dice", quantity=dice_qty, search_terms=dice_terms
-                    ),
-                    SourcePlan(
-                        source="indeed", quantity=indeed_qty, search_terms=indeed_terms
-                    ),
-                ],
+                sources=source_plans,
             )
         )
     else:
-        # Multiple roles - split evenly
+        # Multiple roles — split quantity evenly
         qty_per_role = request_params.quantity // len(roles)
         remainder = request_params.quantity % len(roles)
 
         for i, role in enumerate(roles):
             role_qty = qty_per_role + (1 if i < remainder else 0)
-            dice_qty = int(role_qty * dice_pct / 100)
-            indeed_qty = role_qty - dice_qty
-
             terms = role_search_terms.get(role, [])
-            dice_terms = terms[:4]
-            indeed_terms = terms[:4]
+            source_plans = allocator.allocate(role_qty, terms)
 
             plans.append(
                 RolePlan(
                     role=role,
                     quantity=role_qty,
-                    sources=[
-                        SourcePlan(
-                            source="dice", quantity=dice_qty, search_terms=dice_terms
-                        ),
-                        SourcePlan(
-                            source="indeed",
-                            quantity=indeed_qty,
-                            search_terms=indeed_terms,
-                        ),
-                    ],
+                    sources=source_plans,
                 )
             )
 
     return plans
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# Search term loading / filtering (unchanged)
+# ───────────────────────────────────────────────────────────────────────────
 
 
 def load_search_terms(searchterms_path: str) -> list[SearchTerm]:
@@ -227,7 +538,7 @@ def load_search_terms(searchterms_path: str) -> list[SearchTerm]:
         return []
 
     content = path.read_text()
-    terms = []
+    terms: list[SearchTerm] = []
 
     # Parse Broad (Set 1)
     set1_match = re.search(
@@ -286,13 +597,20 @@ def filter_search_terms(
     return terms[:4]
 
 
+# ───────────────────────────────────────────────────────────────────────────
+# CLI test
+# ───────────────────────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
-    # Test parsing
     test_requests = [
         "Get 50 jobs for AI/ML Engineer",
         "Get 50 jobs for AI/ML Engineer, remote, Boston",
         "Get 100 jobs for AI/ML Engineer, Data Scientist",
         "Get jobs for AI/ML Engineer, score > 70%",
+        "Get 50 contract jobs for DevOps Engineer",
+        "Get 80 fulltime jobs for Full Stack Engineer",
+        "Get 30 premium jobs for ML Engineer",
+        "Get 50 c2h jobs for Java Developer",
     ]
 
     for req in test_requests:
@@ -300,6 +618,14 @@ if __name__ == "__main__":
         print(f"\nRequest: {req}")
         print(f"  Roles: {params.roles}")
         print(f"  Quantity: {params.quantity}")
+        print(f"  Priority: {params.priority}")
+        print(f"  Employment Type: {params.employment_type}")
         print(f"  Work Mode: {params.work_mode}")
         print(f"  Score Threshold: {params.score_threshold}%")
         print(f"  Source Split: {params.source_split}")
+
+        # Show allocation
+        allocator = SourceAllocator(priority=params.priority)
+        dummy_terms = [SearchTerm(term="test", set_number=2, priority=1)]
+        plans = allocator.allocate(params.quantity, dummy_terms)
+        print(allocator.summary(plans))

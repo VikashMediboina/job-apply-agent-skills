@@ -63,14 +63,23 @@ def jobs_by_date_dir(date: str = None) -> Path:
 
 
 def jobs_by_timestamp(timestamp: str = None) -> dict[str, Path]:
-    """Get jobs XLSX and status paths for a specific timestamp."""
+    """Get jobs output directory and status paths for a specific timestamp.
+
+    The 'jobs_dir' key points to the timestamped output directory where
+    jobs.md and index.md are written. The legacy 'xlsx' key is an alias
+    for a path inside that directory (kept for backward compat — actual
+    output is jobs.md, not xlsx).
+    """
     if timestamp is None:
         from datetime import datetime
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     date = timestamp.split("_")[0]
     date_dir = jobs_by_date_dir(date)
+    jobs_output_dir = date_dir / timestamp
     return {
-        "xlsx": date_dir / f"{timestamp}.xlsx",
+        # 'xlsx' key retained for backward compat — callers use .parent to get the dir
+        "xlsx": jobs_output_dir / "jobs.md",
+        "jobs_dir": jobs_output_dir,
         "status": jobs_status_dir() / date / f"{timestamp}.md",
     }

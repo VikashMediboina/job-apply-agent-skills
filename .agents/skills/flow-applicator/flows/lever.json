@@ -1,0 +1,58 @@
+{
+  "flowId": "lever",
+  "version": "1.0.0",
+  "platform": "lever",
+  "platformType": "ats",
+  "description": "Lever ATS application form - typically no login required",
+
+  "nodes": {
+    "landing": {
+      "type": "page",
+      "urlPattern": "jobs.lever.co/.*",
+      "description": "Job posting page"
+    },
+    "form": {
+      "type": "form",
+      "description": "Application form",
+      "fields": [
+        "name",
+        "email",
+        "phone",
+        "resumeUpload",
+        "linkedIn",
+        "github",
+        "website"
+      ]
+    },
+    "questions": {
+      "type": "form",
+      "description": "Custom questions",
+      "fields": ["workAuth", "customQuestions"]
+    },
+    "submit": {
+      "type": "form",
+      "description": "Submit"
+    }
+  },
+
+  "edges": [
+    {"from": "landing", "to": "form", "trigger": "click_apply"},
+    {"from": "form", "to": "questions", "trigger": "click_next"},
+    {"from": "questions", "to": "submit", "trigger": "click_submit"},
+    {"from": "submit", "to": "done", "trigger": "click_submit"}
+  ],
+
+  "fieldMappings": {
+    "name": {"source": "profile", "field": "name"},
+    "email": {"source": "profile", "field": "email"},
+    "phone": {"source": "profile", "field": "phone"},
+    "resumeUpload": {"source": "role", "field": "resumePath"},
+    "linkedIn": {"source": "profile", "field": "linkedin"},
+    "github": {"source": "profile", "field": "github"}
+  },
+
+  "commonQuestions": [
+    {"question": "Are you authorized to work in the US?", "answer": "Yes"},
+    {"question": "Do you require visa sponsorship?", "answer": "Yes, I will require sponsorship in the future"}
+  ]
+}

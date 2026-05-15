@@ -189,37 +189,164 @@ def render_role_section(
     return "\n".join(lines)
 
 
+def _safe_get(obj: dict | None, *keys: str, default: str = "N/A") -> str:
+    """Safely traverse nested dicts, returning *default* if any key is missing."""
+    current = obj
+    for key in keys:
+        if not isinstance(current, dict):
+            return default
+        current = current.get(key)
+        if current is None:
+            return default
+    return str(current) if current else default
+
+
 def render_job_card(job: dict) -> str:
-    """Render a single job as a compact markdown card with source info."""
+    """Render a single job as a strict, consistent markdown card.
+
+    Strict format — every card has the SAME fields in the SAME order.
+    Missing data renders as "N/A", never omitted.
+
+    Sections:
+    1. Title + Score
+    2. Company details (name, website, industry, rating)
+    3. Client/Vendor company (for staffing/contract roles)
+    4. Location + Work type
+    5. Salary
+    6. Employment details
+    7. Recruiter info
+    8. Source + Apply link
+    9. ID
+    """
     title = job.get("title", "Unknown Title")
     score = job.get("score", 0)
     recommendation = job.get("recommendation", "Skip")
-    source = job.get("source", job.get("jobSource", {}).get("sourceName", "N/A"))
 
+    company = job.get("company") or {}
+    if isinstance(company, str):
+        company = {"name": company}
+    client_company = job.get("clientCompany") or {}
+    vendor_company = job.get("vendorCompany") or {}
+    location = job.get("location") or {}
+    if isinstance(location, str):
+        location = {"city": location}
+    salary = job.get("salary") or {}
+    recruiter = job.get("recruiter") or {}
+    job_source = job.get("jobSource") or {}
+    apply_info = job.get("apply") or {}
+
+    # --- Source (handles both nested and flat schemas) ---
+    raw_source = job.get("source", job_source.get("sourceName", "N/A"))
+    if isinstance(raw_source, dict):
+        source_name = raw_source.get("name", "N/A")
+        source_type = raw_source.get("type", job_source.get("sourceType", "N/A"))
+    else:
+        source_name = str(raw_source) if raw_source else "N/A"
+        source_type = job_source.get("sourceType", "N/A")
+
+    # --- Apply URL (handles both nested and flat schemas) ---
+    apply_url = (
+        apply_info.get("applyUrl")
+        or job.get("applyUrl")
+        or job.get("apply_url")
+        or "N/A"
+    )
+    easy_apply = apply_info.get("easyApply", job.get("easyApply", "N/A"))
+    if isinstance(easy_apply, bool):
+        easy_apply = "Yes" if easy_apply else "No"
+
+    # --- Location string ---
+    loc_parts = [
+        location.get("city", ""),
+        location.get("state", ""),
+        location.get("country", ""),
+    ]
+    loc_str = ", ".join(p for p in loc_parts if p) or "N/A"
+
+    # --- Salary string ---
+    sal_min = salary.get("min")
+    sal_max = salary.get("max")
+    if sal_min or sal_max:
+        min_s = f"${sal_min:,}" if sal_min else "N/A"
+        max_s = f"${sal_max:,}" if sal_max else "N/A"
+        currency = salary.get("currency", salary.get("currencyCode", "USD"))
+        sal_type = salary.get("type", "")
+        salary_str = f"{min_s} - {max_s} {currency} {sal_type}".strip()
+    else:
+        salary_str = "N/A"
+
+    # --- Job types ---
+    job_types = job.get("jobTypes", [])
+    job_types_str = ", ".join(job_types) if job_types else "N/A"
+
+    # --- Build card ---
     lines = [
         f"**{title}**",
+        f"Score: {score}% | {recommendation}",
         "",
-        f"- Company: {job.get('company', {}).get('name', 'N/A')}",
-        f"- Location: {job.get('location', {}).get('city', 'N/A')}, {job.get('location', {}).get('state', '')} {job.get('location', {}).get('country', '')}",
-        f"- Work Type: {job.get('workType', 'N/A')}",
-        f"- Source: {source}",
+        # Company details — always present
+        f"- Company: {_safe_get(company, 'name')}",
+        f"- Company Website: {_safe_get(company, 'website')}",
+        f"- Industry: {_safe_get(company, 'industry')}",
+        f"- Company Size: {_safe_get(company, 'employeeRange')}",
+        f"- Company Rating: {_safe_get(company, 'rating')}",
     ]
 
-    salary = job.get("salary", {})
-    if salary.get("min") or salary.get("max"):
-        min_s = f"${salary['min']:,}" if salary.get("min") else "N/A"
-        max_s = f"${salary['max']:,}" if salary.get("max") else "N/A"
-        lines.append(
-            f"- Salary: {min_s} - {max_s} {salary.get('currencyCode', 'USD')} {salary.get('type', '')}"
+    # Client company (for staffing/vendor roles)
+    client_name = _safe_get(client_company, "name")
+    if client_name != "N/A":
+        lines.extend(
+            [
+                f"- Client Company: {client_name}",
+                f"- Client Industry: {_safe_get(client_company, 'industry')}",
+                f"- Client Website: {_safe_get(client_company, 'website')}",
+            ]
         )
 
-    lines.append(f"- Score: {score}% | {recommendation}")
+    # Vendor company
+    vendor_name = _safe_get(vendor_company, "name")
+    if vendor_name != "N/A":
+        lines.extend(
+            [
+                f"- Vendor: {vendor_name}",
+                f"- Vendor Website: {_safe_get(vendor_company, 'website')}",
+            ]
+        )
 
-    apply_url = job.get("apply", {}).get("applyUrl")
-    if apply_url:
-        lines.append(f"- Apply: {apply_url}")
+    # --- Remote flag ---
+    remote_val = location.get("remote")
+    if isinstance(remote_val, bool):
+        remote_str = "Yes" if remote_val else "No"
+    elif remote_val is not None:
+        remote_str = str(remote_val)
+    else:
+        remote_str = "N/A"
 
-    lines.append(f"- ID: {job.get('id', 'N/A')}")
+    lines.extend(
+        [
+            # Location + work
+            f"- Location: {loc_str}",
+            f"- Remote: {remote_str}",
+            f"- Work Type: {job.get('workType', 'N/A')}",
+            f"- Job Types: {job_types_str}",
+            # Salary
+            f"- Salary: {salary_str}",
+            # Recruiter — always present
+            f"- Recruiter: {_safe_get(recruiter, 'name')}",
+            f"- Recruiter Email: {_safe_get(recruiter, 'email')}",
+            f"- Recruiter Phone: {_safe_get(recruiter, 'phone')}",
+            f"- Recruiter LinkedIn: {_safe_get(recruiter, 'linkedin')}",
+            f"- Recruiter Company: {_safe_get(recruiter, 'company')}",
+            # Source + Apply
+            f"- Source: {source_name}",
+            f"- Source Type: {source_type}",
+            f"- Apply: {apply_url}",
+            f"- Easy Apply: {easy_apply}",
+            # ID
+            f"- ID: {job.get('id', 'N/A')}",
+            f"- External ID: {job.get('externalJobId', 'N/A')}",
+        ]
+    )
 
     return "\n".join(lines)
 
